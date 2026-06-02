@@ -57,7 +57,7 @@ services:
         max-size: "10m"   
         max-file: "3"
 
-  # 4. EL CEREBRO TRADUCTOR (Tu nueva imagen IA que procesa leyes)
+# 4. EL CEREBRO TRADUCTOR (Proceso de baja prioridad)
   vectorizer:
     image: ghcr.io/manuelbernalcarvajal/busca-vectorizer:latest
     container_name: arana-ia
@@ -67,6 +67,15 @@ services:
     depends_on:
       - meilisearch
     restart: unless-stopped
+    # 1. TRUCO LINUX: Ejecutamos el script con la prioridad más baja posible (nice -n 19)
+    command: >
+      nice -n 19 python vectorize_worker.py
+    # 2. LÍMITES DOCKER: Le ponemos una correa corta
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'        # Nunca podrá usar más de medio núcleo de CPU
+          memory: 1024M      # Nunca usará más de 1GB de RAM (si se pasa, espera, no bloquea)
     logging:
       driver: "json-file"
       options:
