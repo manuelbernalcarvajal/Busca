@@ -8,8 +8,11 @@ USER_AGENT = 'BuscadorLegalBot/1.0 (+contacto@tudominio.com)'
 ROBOTSTXT_OBEY = True
 
 # 3. Paciencia (Rate Limiting)
-# Esperar 2 segundos entre cada petición a la misma web
-DOWNLOAD_DELAY = 2.0 
+# Paciencia extrema: Espera 5 segundos entre cada petición (así no saturas nada)
+DOWNLOAD_DELAY = 5.0 
+
+# Si quieres que consuma aún menos CPU, limítale los procesos en paralelo
+CONCURRENT_REQUESTS = 10
 
 # 4. Modo Auto-Piloto Ético (AutoThrottle)
 # Si Scrapy detecta que el servidor del BOE va lento, él solo frena y espera más tiempo.
