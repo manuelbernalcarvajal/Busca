@@ -1,12 +1,6 @@
 import requests
 import re
 import os
-
-class ProcesadorGobiernoPipeline:
-    
-import requests
-import re
-import os
 from datetime import datetime
 
 class ProcesadorGobiernoPipeline:
