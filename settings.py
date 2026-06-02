@@ -24,3 +24,8 @@ AUTOTHROTTLE_MAX_DELAY = 60.0
 DOWNLOADER_MIDDLEWARES = {
     'middlewares.MemoriaCrawlerMiddleware': 543, # El número indica la prioridad (orden de ejecución)
 }
+
+# Activar el túnel de preclasificación y envío a Meilisearch
+ITEM_PIPELINES = {
+    'pipelines.ProcesadorGobiernoPipeline': 300,
+}
