@@ -42,7 +42,7 @@ jobs:
       # -----------------------------------------------------------
       # CONSTRUIR IMAGEN 1: fronted
       # -----------------------------------------------------------
-      - name: 🕷️ Construir y Subir CRAWLER
+      - name: 🕷️ Construir y Subir FRONTEND
         uses: docker/build-push-action@v4
         with:
           context: ./frontend
