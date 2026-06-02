@@ -1,10 +1,23 @@
 #!/bin/bash
 
-echo "🚀 Iniciando contenedor de indexación..."
+echo "🚀 Iniciando contenedor de indexación en modo 24/7 (Fuego Lento)..."
 
-# 1. Ejecutamos el script que actualiza el dominios.txt
-python actualizar_dominios.py
+# Creamos un bucle infinito
+while true; do
+    echo "================================================="
+    echo "📅 Iniciando nuevo ciclo de rastreo: $(date)"
+    echo "================================================="
 
-# 2. Llamamos a Scrapy usando el 'name' interno de nuestra araña
-echo "🕷️ Soltando a la araña rastreadora..."
-scrapy crawl gob_spider
+    # 1. Actualizamos la lista de dominios por si hay novedades
+    python actualizar_dominios.py
+
+    # 2. Soltamos a la araña
+    echo "🕷️ Rastreando..."
+    scrapy crawl gob_spider
+
+    # 3. La pausa de descanso
+    # Cuando la araña termine (o si se corta), el contenedor dormirá.
+    # 86400 segundos = 24 horas. Puedes ajustarlo a 43200 (12 horas) o lo que prefieras.
+    echo "💤 Ciclo terminado. Liberando memoria y durmiendo hasta mañana..."
+    sleep 86400 
+done
