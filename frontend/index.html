@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Buscador Oficial | Administración</title>
+    <title>Buscador de fuentes oficiales y Administrativas</title>
     <style>
         :root { --primary: #1a73e8; --text: #202124; --bg: #f8f9fa; --card-bg: #ffffff; }
         body { font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: var(--bg); color: var(--text); margin: 0; padding: 0; }
@@ -146,7 +146,7 @@
             const bodyPeticion = {
                 q: queryFinal,
                 attributesToHighlight: ["contenido"], 
-                attributesToCrop: ["contenido:40"], 
+                attributesToCrop: ["contenido:130"], 
                 cropMarker: "..."
             };
             
@@ -166,7 +166,7 @@
                 const datos = await respuesta.json();
                 
                 if (!datos.hits || datos.hits.length === 0) {
-                    panel.innerHTML = `<p style="text-align:center; color:#d93025;">No se encontraron resultados. Prueba a desactivar filtros.</p>`;
+                    panel.innerHTML = `<p style="text-align:center; color:#d93025;">No hay resultados disponibles actualmente.</p>`;
                     return;
                 }
                 panel.innerHTML = generarHTMLResultados(datos.hits);
