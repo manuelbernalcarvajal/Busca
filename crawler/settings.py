@@ -2,7 +2,7 @@
 
 # 1. Tu etiqueta de identificación (User-Agent)
 # Siempre pon un email o una web para que el admin del servidor sepa quién eres.
-USER_AGENT = 'BuscadorLegalBot/1.0 (+contacto@tudominio.com)'
+USER_AGENT = 'Buscadorlegalygobpages/1.0 (+buscadorlegalygobpages@apdespanol.es.eu.org)'
 
 # 2. Respetar las reglas de la casa
 ROBOTSTXT_OBEY = True
