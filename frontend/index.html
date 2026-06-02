@@ -3,13 +3,15 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Buscador de fuentes oficiales y Administrativas</title>
+    <title>Buscador jurídico-administrativo</title>
     <style>
         :root { --primary: #1a73e8; --text: #202124; --bg: #f8f9fa; --card-bg: #ffffff; }
         body { font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: var(--bg); color: var(--text); margin: 0; padding: 0; }
         
-        .header { background: var(--card-bg); padding: 20px; text-align: center; border-bottom: 1px solid #dadce0; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
+        .header { background: var(--card-bg); padding: 20px; text-align: center; border-bottom: 1px solid #dadce0; box-shadow: 0 1px 3px rgba(0,0,0,0.05); position: relative; }
         .logo { font-size: 2em; font-weight: 700; color: var(--primary); letter-spacing: -0.5px; }
+        
+        .contador-paginas { position: absolute; top: 20px; right: 20px; background: #e8eaed; padding: 6px 15px; border-radius: 20px; font-size: 0.85em; color: #5f6368; font-weight: 600; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
         
         .container { max-width: 900px; margin: 40px auto; padding: 0 20px; }
         
@@ -18,10 +20,14 @@
         .search-box { width: 100%; max-width: 700px; padding: 16px 24px; font-size: 1.2em; border: 1px solid #dfe1e5; border-radius: 30px; box-shadow: 0 1px 6px rgba(32,33,36,0.1); outline: none; transition: box-shadow 0.2s; }
         .search-box:focus { box-shadow: 0 2px 12px rgba(32,33,36,0.2); }
         
-        .filtros-bar { display: flex; gap: 15px; align-items: center; flex-wrap: wrap; justify-content: center; }
+        .filtros-bar { display: flex; gap: 15px; align-items: center; flex-wrap: wrap; justify-content: center; width: 100%; max-width: 700px; }
         select { padding: 8px 15px; border-radius: 20px; border: 1px solid #dfe1e5; background: white; font-size: 0.9em; cursor: pointer; outline: none; }
         .checkbox-label { font-size: 0.9em; display: flex; align-items: center; gap: 5px; cursor: pointer; color: #5f6368; }
         
+        /* Botón Imprimir */
+        .btn-imprimir { margin-left: auto; background: #e8eaed; color: #3c4043; border: none; padding: 8px 15px; border-radius: 20px; font-size: 0.9em; font-weight: 600; cursor: pointer; transition: 0.2s; }
+        .btn-imprimir:hover { background: #d2e3fc; color: var(--primary); }
+
         /* Historial */
         .historial-tags { display: flex; justify-content: center; gap: 10px; flex-wrap: wrap; margin-bottom: 30px; }
         .tag { background: #e8eaed; color: #3c4043; padding: 6px 14px; border-radius: 16px; font-size: 0.9em; cursor: pointer; border: none; transition: background 0.2s; }
@@ -32,24 +38,45 @@
         .resultado { background: var(--card-bg); padding: 24px; border-radius: 12px; box-shadow: 0 2px 6px rgba(0,0,0,0.05); border: 1px solid #f1f3f4; }
         .etiqueta { display: inline-block; background: #e8f0fe; color: var(--primary); padding: 4px 10px; border-radius: 6px; font-size: 0.8em; font-weight: 600; margin-bottom: 10px; }
         .titulo { font-size: 1.3em; color: #1a0dab; margin-bottom: 10px; font-weight: 500; }
-        .texto-destacado { font-size: 1.05em; line-height: 1.6; color: #4d5156; }
+        .texto-destacado { font-size: 1.05em; line-height: 1.6; color: #4d5156; display: block; margin-bottom: 12px; }
         em { background-color: #fce8e6; color: #d93025; font-style: normal; font-weight: bold; border-radius: 3px; padding: 0 2px; }
         
         .desplegable { margin-top: 15px; background: #f8f9fa; border-radius: 8px; padding: 10px; }
         .desplegable summary { color: #006621; cursor: pointer; font-weight: 500; user-select: none; }
         .desplegable ul { list-style: none; padding: 10px 0 0 10px; margin: 0; }
-        .desplegable a { color: #1a0dab; text-decoration: none; font-size: 0.95em; }
+        .desplegable a { color: #1a0dab; text-decoration: none; font-size: 0.95em; font-weight: 600; }
+        .titulo-enlace { color: #5f6368; font-size: 0.85em; margin-left: 5px; }
+
+        /* Botón Cargar Más */
+        .btn-cargar-mas { display: none; margin: 30px auto; padding: 12px 25px; background: white; border: 1px solid #dadce0; border-radius: 20px; color: var(--primary); font-size: 1em; font-weight: 600; cursor: pointer; text-align: center; box-shadow: 0 1px 3px rgba(0,0,0,0.05); transition: 0.2s; }
+        .btn-cargar-mas:hover { background: #f8f9fa; box-shadow: 0 1px 6px rgba(0,0,0,0.1); }
 
         /* Banner de Cookies UE */
-        .cookie-banner { position: fixed; bottom: 0; left: 0; width: 100%; background: #202124; color: white; padding: 15px 20px; text-align: center; font-size: 0.9em; box-sizing: border-box; display: none; z-index: 1000; display: flex; justify-content: center; align-items: center; gap: 20px; flex-wrap: wrap; }
+        .cookie-banner { position: fixed; bottom: 0; left: 0; width: 100%; background: #202124; color: white; padding: 15px 20px; text-align: center; font-size: 0.9em; box-sizing: border-box; display: none; z-index: 1000; justify-content: center; align-items: center; gap: 20px; flex-wrap: wrap; }
         .cookie-btn { background: var(--primary); color: white; border: none; padding: 8px 20px; border-radius: 4px; cursor: pointer; font-weight: bold; }
         .cookie-btn:hover { background: #1765cc; }
+        
+        /* Responsive y Estilos de Impresión (Magia para los yayos) */
+        @media (max-width: 600px) {
+            .contador-paginas { position: static; display: inline-block; margin-top: 10px; }
+        }
+        
+        @media print {
+            /* Ocultamos todo lo que no son resultados */
+            .header, .search-container, .historial-tags, .btn-cargar-mas, .cookie-banner, .desplegable summary { display: none !important; }
+            body { background: white; color: black; }
+            .container { margin: 0; padding: 0; max-width: 100%; }
+            .resultado { border: 1px solid #ccc; box-shadow: none; page-break-inside: avoid; margin-bottom: 20px; }
+            .desplegable ul { display: block; padding-left: 0; }
+            a { text-decoration: none; color: black; }
+        }
     </style>
 </head>
 <body>
 
     <header class="header">
-        <div class="logo">Buscador Oficial</div>
+        <div class="logo">Buscador jurídico-administrativo</div>
+        <div id="contadorInfo" class="contador-paginas">Calculando...</div>
     </header>
 
     <div class="container">
@@ -57,7 +84,7 @@
             <input type="text" id="searchInput" class="search-box" placeholder="Busca leyes, trámites, ministerios..." onkeyup="manejarBusqueda(event)">
             
             <div class="filtros-bar">
-                <select id="filtroCategoria" onchange="ejecutarBusqueda(document.getElementById('searchInput').value)">
+                <select id="filtroCategoria" onchange="ejecutarNuevaBusqueda()">
                     <option value="TODAS">Todas las categorías</option>
                     <option value="Tramite/Servicio">Trámites y Servicios</option>
                     <option value="Legislacion/Normativa">Leyes y Normativa</option>
@@ -66,14 +93,19 @@
                 </select>
 
                 <label class="checkbox-label" title="Obliga al buscador a encontrar la frase exacta">
-                    <input type="checkbox" id="busquedaExacta" onchange="ejecutarBusqueda(document.getElementById('searchInput').value)">
+                    <input type="checkbox" id="busquedaExacta" onchange="ejecutarNuevaBusqueda()">
                     Búsqueda Exacta ("")
                 </label>
+
+                <button class="btn-imprimir" onclick="window.print()" title="Imprimir resultados en papel">🖨️ Imprimir</button>
             </div>
         </div>
         
         <div class="historial-tags" id="historialDiv"></div>
+        
         <div id="panelPrincipal"></div>
+        
+        <button id="btnCargarMas" class="btn-cargar-mas" onclick="cargarMasResultados()">⬇️ Cargar más resultados</button>
     </div>
 
     <div class="cookie-banner" id="cookieBanner">
@@ -82,21 +114,32 @@
     </div>
 
     <script>
-        // ¡Magia! Ya no hay contraseñas ni URLs de la base de datos aquí.
-        // Somos totalmente inmunes a mirones.
-
         document.addEventListener("DOMContentLoaded", () => {
             comprobarCookies();
             pintarHistorial();
             cargarNovedades();
+            cargarEstadisticas(); 
         });
+
+        // --- SISTEMA DE ESTADÍSTICAS (CONTADOR) ---
+        async function cargarEstadisticas() {
+            try {
+                const res = await fetch('/api/stats');
+                const data = await res.json();
+                if (data.numberOfDocuments) {
+                    document.getElementById('contadorInfo').innerText = `📄 ${data.numberOfDocuments.toLocaleString('es-ES')} documentos oficiales`;
+                } else {
+                    document.getElementById('contadorInfo').style.display = 'none';
+                }
+            } catch (e) {
+                document.getElementById('contadorInfo').style.display = 'none';
+            }
+        }
 
         // --- SISTEMA DE COOKIES (UE) ---
         function comprobarCookies() {
             if (!localStorage.getItem('cookiesAceptadas')) {
                 document.getElementById('cookieBanner').style.display = 'flex';
-            } else {
-                document.getElementById('cookieBanner').style.display = 'none';
             }
         }
         function aceptarCookies() {
@@ -121,32 +164,76 @@
         }
         function buscarDesdeHistorial(busqueda) {
             document.getElementById('searchInput').value = busqueda;
-            ejecutarBusqueda(busqueda);
+            ejecutarNuevaBusqueda();
         }
 
-        // --- MOTOR DE BÚSQUEDA ---
+        // --- CONTROL DE PAGINACIÓN Y ESTADO ---
+        let timerBusqueda;
+        let queryActual = "";
+        let offsetActual = 0;
+        const LIMITE_POR_PAGINA = 20;
+        let hitsAcumulados = []; // Guardamos los resultados para agruparlos todos juntos
+
         function manejarBusqueda(evento) {
+            clearTimeout(timerBusqueda);
             const query = document.getElementById('searchInput').value.trim();
+            
             if (evento.key === 'Enter') {
-                if (query.length > 0) ejecutarBusqueda(query);
+                if (query.length > 0) ejecutarNuevaBusqueda();
                 else cargarNovedades();
+            } else {
+                if (query.length > 3) {
+                    timerBusqueda = setTimeout(() => ejecutarNuevaBusqueda(), 400);
+                }
             }
         }
 
-        async function ejecutarBusqueda(query) {
+        function ejecutarNuevaBusqueda() {
+            const query = document.getElementById('searchInput').value.trim();
             if (!query) return;
+            
+            // Reiniciamos los contadores para una búsqueda nueva
+            queryActual = query;
+            offsetActual = 0;
+            hitsAcumulados = [];
             guardarEnHistorial(query);
             
+            document.getElementById('panelPrincipal').innerHTML = '<p style="text-align:center;">Buscando...</p>';
+            document.getElementById('btnCargarMas').style.display = 'none';
+            
+            hacerPeticionAPI();
+        }
+
+        function cargarMasResultados() {
+            offsetActual += LIMITE_POR_PAGINA;
+            document.getElementById('btnCargarMas').innerText = '⏳ Cargando...';
+            hacerPeticionAPI();
+        }
+
+        // --- ALGORITMO DE SIMILITUD (AGRUPACIÓN INTELIGENTE) ---
+        function similitudTextos(str1, str2) {
+            const palabras1 = new Set(str1.toLowerCase().split(/\W+/).filter(w => w.length > 3));
+            const palabras2 = new Set(str2.toLowerCase().split(/\W+/).filter(w => w.length > 3));
+            if (palabras1.size === 0 || palabras2.size === 0) return 0;
+            const interseccion = new Set([...palabras1].filter(x => palabras2.has(x)));
+            const union = new Set([...palabras1, ...palabras2]);
+            return interseccion.size / union.size;
+        }
+
+        async function hacerPeticionAPI() {
             const panel = document.getElementById('panelPrincipal');
+            const btnCargarMas = document.getElementById('btnCargarMas');
             const categoria = document.getElementById('filtroCategoria').value;
             const esExacta = document.getElementById('busquedaExacta').checked;
             
-            const queryFinal = esExacta ? `"${query}"` : query;
+            const queryFinal = esExacta ? `"${queryActual}"` : queryActual;
             
             const bodyPeticion = {
                 q: queryFinal,
-                attributesToHighlight: ["contenido"], 
-                attributesToCrop: ["contenido:130"], 
+                limit: LIMITE_POR_PAGINA,
+                offset: offsetActual,
+                attributesToHighlight: ["contenido", "titulo"], 
+                attributesToCrop: ["contenido:40"], 
                 cropMarker: "..."
             };
             
@@ -154,10 +241,7 @@
                 bodyPeticion.filter = [`categoria = '${categoria}'`];
             }
 
-            panel.innerHTML = '<p style="text-align:center;">Buscando...</p>';
-            
             try {
-                // ATACAMOS A NUESTRO PROPIO SERVIDOR DE PYTHON
                 const respuesta = await fetch('/api/buscar', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -165,20 +249,34 @@
                 });
                 const datos = await respuesta.json();
                 
-                if (!datos.hits || datos.hits.length === 0) {
-                    panel.innerHTML = `<p style="text-align:center; color:#d93025;">No hay resultados disponibles actualmente.</p>`;
-                    return;
+                // Añadimos los nuevos a la colección general
+                if (datos.hits && datos.hits.length > 0) {
+                    hitsAcumulados = hitsAcumulados.concat(datos.hits);
+                    panel.innerHTML = generarHTMLResultados(hitsAcumulados);
+                    
+                    // Si nos devolvieron exactamente el límite, es muy probable que haya más páginas
+                    if (datos.hits.length === LIMITE_POR_PAGINA) {
+                        btnCargarMas.style.display = 'block';
+                        btnCargarMas.innerText = '⬇️ Cargar más resultados';
+                    } else {
+                        btnCargarMas.style.display = 'none'; // Se acabó la lista
+                    }
+                } else if (offsetActual === 0) {
+                    panel.innerHTML = `<p style="text-align:center; color:#d93025;">No hay resultados disponibles para esta búsqueda.</p>`;
+                    btnCargarMas.style.display = 'none';
+                } else {
+                    btnCargarMas.style.display = 'none'; // Intentamos cargar más pero ya no había
                 }
-                panel.innerHTML = generarHTMLResultados(datos.hits);
+
             } catch (error) {
                 console.error(error);
-                panel.innerHTML = '<p style="text-align:center; color:red;">Error de conexión.</p>';
+                if (offsetActual === 0) panel.innerHTML = '<p style="text-align:center; color:red;">Error de conexión.</p>';
+                btnCargarMas.innerText = '⬇️ Cargar más resultados'; // Restaurar botón
             }
         }
 
         async function cargarNovedades() {
             try {
-                // ATACAMOS A NUESTRO PROPIO SERVIDOR DE PYTHON
                 const respuesta = await fetch('/api/buscar', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -187,23 +285,41 @@
                 const datos = await respuesta.json();
                 
                 if(datos.hits && datos.hits.length > 0) {
-                    document.getElementById('panelPrincipal').innerHTML = `<h3 style="color:#5f6368;">🔥 Últimas Leyes Procesadas</h3>` + generarHTMLResultados(datos.hits);
+                    hitsAcumulados = datos.hits;
+                    document.getElementById('panelPrincipal').innerHTML = `<h3 style="color:#5f6368; text-align:center;">🔥 Últimas Leyes Procesadas</h3>` + generarHTMLResultados(hitsAcumulados);
+                    document.getElementById('btnCargarMas').style.display = 'none';
                 }
             } catch (e) {}
         }
 
         function generarHTMLResultados(hits) {
             const agrupados = {};
+
             hits.forEach(hit => {
-                const titulo = hit.titulo;
-                if (!agrupados[titulo]) {
-                    agrupados[titulo] = {
+                const tituloOriginal = hit.titulo;
+                let tituloGrupo = null;
+
+                for (const clave in agrupados) {
+                    if (similitudTextos(tituloOriginal, clave) > 0.60) {
+                        tituloGrupo = clave;
+                        break;
+                    }
+                }
+
+                if (!tituloGrupo) {
+                    tituloGrupo = tituloOriginal;
+                    agrupados[tituloGrupo] = {
                         categoria: hit.categoria,
-                        texto: hit._formatted ? hit._formatted.contenido : hit.contenido.substring(0, 200) + '...',
+                        texto: hit._formatted ? hit._formatted.contenido : hit.contenido.substring(0, 250) + '...',
                         enlaces: []
                     };
                 }
-                agrupados[titulo].enlaces.push({ url: hit.url, dominio: hit.dominio });
+
+                agrupados[tituloGrupo].enlaces.push({ 
+                    url: hit.url, 
+                    dominio: hit.dominio,
+                    tituloEspecifico: tituloOriginal 
+                });
             });
 
             return '<div class="grid-resultados">' + Object.entries(agrupados).map(([titulo, info]) => `
@@ -212,8 +328,13 @@
                     <div class="titulo">${titulo}</div>
                     <div class="texto-destacado">${info.texto}</div>
                     <details class="desplegable">
-                        <summary>Fuentes oficiales (${info.enlaces.length})</summary>
-                        <ul>${info.enlaces.map(e => `<li>🔗 <a href="${e.url}" target="_blank">${e.dominio}</a></li>`).join('')}</ul>
+                        <summary>Fuentes oficiales unificadas (${info.enlaces.length})</summary>
+                        <ul>${info.enlaces.map(e => `
+                            <li style="margin-bottom: 8px;">
+                                🔗 <a href="${e.url}" target="_blank">${e.dominio}</a> 
+                                <span class="titulo-enlace">- ${e.tituloEspecifico}</span>
+                            </li>
+                        `).join('')}</ul>
                     </details>
                 </div>
             `).join('') + '</div>';
