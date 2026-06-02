@@ -1,6 +1,5 @@
-name: Construir y Subir Crawler a GHCR
+name: Construir y Subir Imágenes a GHCR
 
-# Esto le dice a GitHub: "Ejecuta esto cada vez que el usuario suba código a la rama main"
 on:
   release:
     types: [published]
@@ -10,7 +9,6 @@ jobs:
   build-and-push:
     runs-on: ubuntu-latest
     
-    # Permisos necesarios para que GitHub Actions pueda guardar la imagen en tu cuenta
     permissions:
       contents: read
       packages: write 
@@ -19,21 +17,47 @@ jobs:
       - name: 📥 Descargar el código
         uses: actions/checkout@v3
 
+      # -----------------------------------------------------------
+      # MAGIA MULTI-ARQUITECTURA (ARM e INTEL)
+      # -----------------------------------------------------------
+      - name: ⚙️ Configurar QEMU
+        uses: docker/setup-qemu-action@v2
+
+      - name: 🛠️ Configurar Docker Buildx
+        uses: docker/setup-buildx-action@v2
+
+      # -----------------------------------------------------------
+      # LOGIN Y PREPARACIÓN
+      # -----------------------------------------------------------
       - name: 🔑 Iniciar sesión en el Registro de GitHub
         uses: docker/login-action@v2
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
-          # El token se genera automáticamente, no tienes que poner tu contraseña
           password: ${{ secrets.GITHUB_TOKEN }} 
 
-      - name: 🔠 Convertir el nombre del repositorio a minúsculas (Docker lo exige)
+      - name: 🔠 Convertir el nombre del repositorio a minúsculas
         run: echo "REPO=${GITHUB_REPOSITORY,,}" >>${GITHUB_ENV}
 
-      - name: 🐳 Construir y Subir la imagen Docker
+      # -----------------------------------------------------------
+      # CONSTRUIR IMAGEN 1: CRAWLER
+      # -----------------------------------------------------------
+      - name: 🕷️ Construir y Subir CRAWLER
         uses: docker/build-push-action@v4
         with:
-          context: .
+          context: ./crawler
+          # Aquí le decimos que compile para ambas arquitecturas simultáneamente
+          platforms: linux/amd64,linux/arm64 
           push: true
-          # Tu imagen quedará guardada como: ghcr.io/tu-usuario/tu-repo:latest
-          tags: ghcr.io/${{ env.REPO }}:latest
+          tags: ghcr.io/${{ env.REPO }}-crawler:latest 
+
+      # -----------------------------------------------------------
+      # CONSTRUIR IMAGEN 2: FRONTEND
+      # -----------------------------------------------------------
+      - name: 🛡️ Construir y Subir FRONTEND
+        uses: docker/build-push-action@v4
+        with:
+          context: ./frontend
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: ghcr.io/${{ env.REPO }}-frontend:latest
