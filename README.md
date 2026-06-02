@@ -20,7 +20,7 @@ services:
         max-size: "30m"   # Máximo 10 megas por archivo
         max-file: "3"
 
-  # 2. EL TRABAJADOR
+  # 2. EL TRABAJADOR (Extrae los datos)
   crawler:
     image: ghcr.io/manuelbernalcarvajal/busca-crawler:${APP_VERSION}
     container_name: arana-gobierno
@@ -36,10 +36,10 @@ services:
     logging:
       driver: "json-file"
       options:
-        max-size: "30m"   # Máximo 10 megas por archivo
+        max-size: "30m"   
         max-file: "3"
 
-  # 3. EL ESCUDO
+  # 3. EL ESCUDO (Interfaz y traducción a IA del usuario)
   frontend:
     image: ghcr.io/manuelbernalcarvajal/busca-frontend:${APP_VERSION}
     container_name: buscador-web
@@ -54,8 +54,43 @@ services:
     logging:
       driver: "json-file"
       options:
-        max-size: "10m"   # Máximo 10 megas por archivo
+        max-size: "10m"   
         max-file: "3"
+
+  # 4. EL CEREBRO TRADUCTOR (Tu nueva imagen IA que procesa leyes)
+  vectorizer:
+    image: ghcr.io/manuelbernalcarvajal/busca-vectorizer:latest
+    container_name: arana-ia
+    environment:
+      - MEILISEARCH_URL=http://meilisearch:7700
+      - MEILISEARCH_KEY=${MEILI_MASTER_KEY}
+    depends_on:
+      - meilisearch
+    restart: unless-stopped
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "30m"
+        max-file: "3"
+
+  # 5. EL CONFIGURADOR (Activa los vectores en Meilisearch 1 sola vez)
+  init-meilisearch:
+    image: alpine:latest
+    container_name: meili-configurador
+    depends_on:
+      - meilisearch
+    environment:
+      # Pasamos la variable de forma segura al entorno del contenedor
+      - CLAVE=${MEILI_MASTER_KEY}
+    command: >
+      /bin/sh -c "
+        sleep 10 &&
+        apk add --no-cache curl &&
+        curl -X PATCH 'http://meilisearch:7700/indexes/documentos_legales/settings' \
+        -H 'Content-Type: application/json' \
+        -H \"Authorization: Bearer $$CLAVE\" \
+        -d '{\"embedders\": {\"default\": {\"source\": \"userProvided\", \"dimensions\": 384}}}'
+      "
 
 # Aquí declaramos los volúmenes gestionados por Docker
 volumes:
