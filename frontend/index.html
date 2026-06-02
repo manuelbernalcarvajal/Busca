@@ -171,7 +171,7 @@
         let timerBusqueda;
         let queryActual = "";
         let offsetActual = 0;
-        const LIMITE_POR_PAGINA = 20;
+        const LIMITE_POR_PAGINA = 50;
         let hitsAcumulados = []; // Guardamos los resultados para agruparlos todos juntos
 
         function manejarBusqueda(evento) {
@@ -233,7 +233,7 @@
                 limit: LIMITE_POR_PAGINA,
                 offset: offsetActual,
                 attributesToHighlight: ["contenido", "titulo"], 
-                attributesToCrop: ["contenido:40"], 
+                attributesToCrop: ["contenido:140"], 
                 cropMarker: "..."
             };
             
