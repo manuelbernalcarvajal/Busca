@@ -15,7 +15,7 @@ services:
       - MEILI_ENV=${MEILI_ENV}
     volumes:
       # Llama a tu ruta local desde el .env
-      - ${MEILI_DATA_PATH}:/meili_data 
+      - MEILI_DATA_PATH:/meili_data 
     restart: unless-stopped
 
   # 2. EL TRABAJADOR (Tu Crawler)
@@ -29,7 +29,7 @@ services:
       - MEILISEARCH_KEY=${MEILI_MASTER_KEY}
     volumes:
       # Llama a la ruta de tu base de datos SQLite desde el .env
-      - ${CRAWLER_DB_PATH}:/app/memoria_crawler.db 
+      - CRAWLER_DB_PATH:/app/memoria_crawler.db 
     depends_on:
       - meilisearch
     restart: unless-stopped
@@ -47,6 +47,9 @@ services:
     depends_on:
       - meilisearch
     restart: unless-stopped
+volumes:
+  MEILI_DATA_PATH:
+  CRAWLER_DB_PATH:
 ```
 Los .env son:
 ```
@@ -61,13 +64,6 @@ MEILI_MASTER_KEY=SuperSecreta123_CambialaPorFavor
 # Entorno de ejecución (development o production). 
 # En 'production' se desactiva la interfaz web por defecto de Meilisearch por seguridad.
 MEILI_ENV=production
-
-# 📁 Rutas de almacenamiento en tu servidor real (Volúmenes)
-# Dónde se guardará el índice de búsqueda (el cerebro)
-MEILI_DATA_PATH=/ruta/en/tu/servidor/meili_data
-
-# Dónde se guardará la memoria a corto plazo de la araña
-CRAWLER_DB_PATH=/ruta/en/tu/servidor/memoria_crawler.db
 
 # 🌐 Redes y Puertos
 # El puerto por el que accederás a tu web desde el navegador
