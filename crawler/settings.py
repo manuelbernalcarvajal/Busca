@@ -29,3 +29,9 @@ DOWNLOADER_MIDDLEWARES = {
 ITEM_PIPELINES = {
     'pipelines.ProcesadorGobiernoPipeline': 300,
 }
+# -----------------------------------------------------------
+# CEREBRO GOOGLE: Búsqueda en Amplitud (Breadth-First Search)
+# -----------------------------------------------------------
+DEPTH_PRIORITY = 1
+SCHEDULER_DISK_QUEUE = 'scrapy.squeues.PickleFifoDiskQueue'
+SCHEDULER_MEMORY_QUEUE = 'scrapy.squeues.FifoMemoryQueue'
