@@ -5,33 +5,75 @@ YALm recomendado:
 version: '3.8'
 
 services:
-  # 1. EL CEREBRO (Meilisearch)
+  # 1. EL CEREBRO (Totalmente aislado de internet)
   meilisearch:
     image: getmeili/meilisearch:latest
     container_name: buscador-gobierno
     environment:
-      # ¡Cambia esta contraseña por una tuya!
-      - MEILI_MASTER_KEY=SuperSecreta123 
-      - MEILI_ENV=production
-    ports:
-      - "7700:7700" # Exponemos el puerto para poder consultarlo desde fuera
+      # Llama a la clave y al entorno desde el .env
+      - MEILI_MASTER_KEY=${MEILI_MASTER_KEY} 
+      - MEILI_ENV=${MEILI_ENV}
     volumes:
-      # Guardamos los datos de Meilisearch en tu servidor para no perderlos
-      - /ruta/en/tu/servidor/meili_data:/meili_data 
+      # Llama a tu ruta local desde el .env
+      - ${MEILI_DATA_PATH}:/meili_data 
     restart: unless-stopped
 
   # 2. EL TRABAJADOR (Tu Crawler)
   crawler:
-    image: ghcr.io/tu-usuario/busca:latest # Aquí pones la imagen que te genera GitHub
+    # Usa la versión definida en el .env
+    image: ghcr.io/manuelbernalcarvajal/busca-crawler:${APP_VERSION}
     container_name: araña-gobierno
     environment:
-      # Así es como hablan: usando el nombre del contenedor de arriba
       - MEILISEARCH_URL=http://meilisearch:7700
-      - MEILISEARCH_KEY=SuperSecreta123
+      # Usa la MISMA clave que el cerebro para no equivocarte
+      - MEILISEARCH_KEY=${MEILI_MASTER_KEY}
     volumes:
-      # Guardamos la memoria SQLite de las 24h
-      - /ruta/en/tu/servidor/memoria_crawler.db:/app/memoria_crawler.db 
+      # Llama a la ruta de tu base de datos SQLite desde el .env
+      - ${CRAWLER_DB_PATH}:/app/memoria_crawler.db 
     depends_on:
-      - meilisearch # El crawler espera a que el cerebro despierte primero
+      - meilisearch
     restart: unless-stopped
+
+  # 3. EL ESCUDO / ESCAPARATE (Tu Servidor Frontend)
+  frontend:
+    image: ghcr.io/manuelbernalcarvajal/busca-frontend:${APP_VERSION}
+    container_name: buscador-web
+    environment:
+      - MEILISEARCH_URL=http://meilisearch:7700
+      - MEILISEARCH_KEY=${MEILI_MASTER_KEY}
+    ports:
+      # Asigna el puerto exterior desde tu .env y lo conecta al puerto 80 interno
+      - "${FRONTEND_PORT}:80" 
+    depends_on:
+      - meilisearch
+    restart: unless-stopped
+```
+Los .env son:
+```
+# ==========================================
+# CONFIGURACIÓN DEL BUSCADOR GUBERNAMENTAL
+# ==========================================
+
+# 🔑 Seguridad
+# La contraseña maestra. Debe tener al menos 16 caracteres para producción.
+MEILI_MASTER_KEY=SuperSecreta123_CambialaPorFavor
+
+# Entorno de ejecución (development o production). 
+# En 'production' se desactiva la interfaz web por defecto de Meilisearch por seguridad.
+MEILI_ENV=production
+
+# 📁 Rutas de almacenamiento en tu servidor real (Volúmenes)
+# Dónde se guardará el índice de búsqueda (el cerebro)
+MEILI_DATA_PATH=/ruta/en/tu/servidor/meili_data
+
+# Dónde se guardará la memoria a corto plazo de la araña
+CRAWLER_DB_PATH=/ruta/en/tu/servidor/memoria_crawler.db
+
+# 🌐 Redes y Puertos
+# El puerto por el que accederás a tu web desde el navegador
+FRONTEND_PORT=8080
+
+# 📦 Versión de las imágenes
+# Por si algún día quieres fijar una versión en vez de usar 'latest' (ej. v1.2)
+APP_VERSION=latest
 ```
