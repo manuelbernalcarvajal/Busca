@@ -1,10 +1,13 @@
 FROM python:3.11-slim
 WORKDIR /app
 
-# Instalamos Flask y Requests
-RUN pip install flask requests
+# 1. Copiamos el archivo de dependencias primero
+COPY requirements.txt .
 
-# Copiamos la app y el html
+# 2. Instalamos TODO (Flask, Requests, Torch, Sentence-Transformers)
+RUN pip install --no-cache-dir -r requirements.txt
+
+# 3. Copiamos la app y el html
 COPY app.py .
 COPY index.html .
 
