@@ -5,36 +5,33 @@ YALm recomendado:
 version: '3.8'
 
 services:
-  # 1. EL CEREBRO (Totalmente aislado de internet)
+  # 1. EL CEREBRO
   meilisearch:
     image: getmeili/meilisearch:latest
     container_name: buscador-gobierno
     environment:
-      # Llama a la clave y al entorno desde el .env
       - MEILI_MASTER_KEY=${MEILI_MASTER_KEY} 
       - MEILI_ENV=${MEILI_ENV}
     volumes:
-      # Llama a tu ruta local desde el .env
-      - MEILI_DATA_PATH:/meili_data 
+      # Conectamos el volumen de Docker a la carpeta interna de Meilisearch
+      - meili_data:/meili_data 
     restart: unless-stopped
 
-  # 2. EL TRABAJADOR (Tu Crawler)
+  # 2. EL TRABAJADOR
   crawler:
-    # Usa la versión definida en el .env
     image: ghcr.io/manuelbernalcarvajal/busca-crawler:${APP_VERSION}
     container_name: araña-gobierno
     environment:
       - MEILISEARCH_URL=http://meilisearch:7700
-      # Usa la MISMA clave que el cerebro para no equivocarte
       - MEILISEARCH_KEY=${MEILI_MASTER_KEY}
     volumes:
-      # Llama a la ruta de tu base de datos SQLite desde el .env
-      - CRAWLER_DB_PATH:/app/memoria_crawler.db 
+      # Conectamos el volumen a la carpeta "datos" (donde SQLite guardará el archivo)
+      - crawler_data:/app/datos 
     depends_on:
       - meilisearch
     restart: unless-stopped
 
-  # 3. EL ESCUDO / ESCAPARATE (Tu Servidor Frontend)
+  # 3. EL ESCUDO
   frontend:
     image: ghcr.io/manuelbernalcarvajal/busca-frontend:${APP_VERSION}
     container_name: buscador-web
@@ -42,14 +39,15 @@ services:
       - MEILISEARCH_URL=http://meilisearch:7700
       - MEILISEARCH_KEY=${MEILI_MASTER_KEY}
     ports:
-      # Asigna el puerto exterior desde tu .env y lo conecta al puerto 80 interno
       - "${FRONTEND_PORT}:80" 
     depends_on:
       - meilisearch
     restart: unless-stopped
+
+# Aquí declaramos los volúmenes gestionados por Docker
 volumes:
-  MEILI_DATA_PATH:
-  CRAWLER_DB_PATH:
+  meili_data:
+  crawler_data:
 ```
 Los .env son:
 ```
