@@ -1,4 +1,4 @@
-name: Construir y Subir Imágenes a GHCR
+name: Construir y Subir Imágenes CRAWLER
 
 on:
   release:
