@@ -210,16 +210,6 @@
             hacerPeticionAPI();
         }
 
-        // --- ALGORITMO DE SIMILITUD (AGRUPACIÓN INTELIGENTE) ---
-        function similitudTextos(str1, str2) {
-            const palabras1 = new Set(str1.toLowerCase().split(/\W+/).filter(w => w.length > 3));
-            const palabras2 = new Set(str2.toLowerCase().split(/\W+/).filter(w => w.length > 3));
-            if (palabras1.size === 0 || palabras2.size === 0) return 0;
-            const interseccion = new Set([...palabras1].filter(x => palabras2.has(x)));
-            const union = new Set([...palabras1, ...palabras2]);
-            return interseccion.size / union.size;
-        }
-
         async function hacerPeticionAPI() {
             const panel = document.getElementById('panelPrincipal');
             const btnCargarMas = document.getElementById('btnCargarMas');
@@ -292,47 +282,51 @@
             } catch (e) {}
         }
 
+        // --- GENERADOR DE HTML CON AGRUPACIÓN DESDE BACKEND ---
         function generarHTMLResultados(hits) {
             const agrupados = {};
 
             hits.forEach(hit => {
-                const tituloOriginal = hit.titulo;
-                let tituloGrupo = null;
+                // Usamos el grupo_id que calculó la IA en el servidor. Si no existe aún, usamos el propio id del documento.
+                const idGrupo = hit.grupo_id || hit.id;
 
-                for (const clave in agrupados) {
-                    if (similitudTextos(tituloOriginal, clave) > 0.60) {
-                        tituloGrupo = clave;
-                        break;
-                    }
-                }
-
-                if (!tituloGrupo) {
-                    tituloGrupo = tituloOriginal;
-                    agrupados[tituloGrupo] = {
+                if (!agrupados[idGrupo]) {
+                    agrupados[idGrupo] = {
                         categoria: hit.categoria,
+                        tituloPrincipal: hit.titulo, 
+                        // El resumen principal visual de la tarjeta
                         texto: hit._formatted ? hit._formatted.contenido : hit.contenido.substring(0, 250) + '...',
                         enlaces: []
                     };
                 }
 
-                agrupados[tituloGrupo].enlaces.push({ 
+                // Guardamos el texto destacado ESPECÍFICO de cada enlace para el desplegable
+                const textoEspecifico = hit._formatted ? hit._formatted.contenido : hit.contenido.substring(0, 150) + '...';
+
+                agrupados[idGrupo].enlaces.push({ 
                     url: hit.url, 
                     dominio: hit.dominio,
-                    tituloEspecifico: tituloOriginal 
+                    tituloEspecifico: hit.titulo,
+                    fragmento: textoEspecifico 
                 });
             });
 
-            return '<div class="grid-resultados">' + Object.entries(agrupados).map(([titulo, info]) => `
+            return '<div class="grid-resultados">' + Object.entries(agrupados).map(([id, info]) => `
                 <div class="resultado">
                     <span class="etiqueta">${info.categoria}</span>
-                    <div class="titulo">${titulo}</div>
+                    <div class="titulo">${info.tituloPrincipal}</div>
                     <div class="texto-destacado">${info.texto}</div>
                     <details class="desplegable">
                         <summary>Fuentes oficiales unificadas (${info.enlaces.length})</summary>
-                        <ul>${info.enlaces.map(e => `
-                            <li style="margin-bottom: 8px;">
-                                🔗 <a href="${e.url}" target="_blank">${e.dominio}</a> 
-                                <span class="titulo-enlace">- ${e.tituloEspecifico}</span>
+                        <ul style="padding-left: 5px;">${info.enlaces.map(e => `
+                            <li style="margin-bottom: 12px; padding-bottom: 10px; border-bottom: 1px dashed #dadce0;">
+                                <div>
+                                    🔗 <a href="${e.url}" target="_blank">${e.dominio}</a> 
+                                    <span class="titulo-enlace">- ${e.tituloEspecifico}</span>
+                                </div>
+                                <div style="font-size: 0.9em; color: #5f6368; margin-top: 6px; margin-left: 22px; line-height: 1.4;">
+                                    ${e.fragmento}
+                                </div>
                             </li>
                         `).join('')}</ul>
                     </details>
