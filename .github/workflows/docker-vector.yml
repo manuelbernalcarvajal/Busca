@@ -42,7 +42,7 @@ jobs:
       # -----------------------------------------------------------
       # CONSTRUIR IMAGEN 1: CRAWLER
       # -----------------------------------------------------------
-      - name: 🕷️ Construir y Subir CRAWLER
+      - name: 🕷️ Construir y Subir VECTORIZER
         uses: docker/build-push-action@v4
         with:
           context: ./embedders
