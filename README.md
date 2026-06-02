@@ -71,3 +71,9 @@ FRONTEND_PORT=8080
 # Por si algún día quieres fijar una versión en vez de usar 'latest' (ej. v1.2)
 APP_VERSION=latest
 ```
+
+
+Para probar si finciona en el icono >_ de portainer puedes lanzar un  a mailiseach este comando, y así te dira cuanto tiene indexado:
+```
+curl http://localhost:7700/indexes/documentos_legales/stats
+```
