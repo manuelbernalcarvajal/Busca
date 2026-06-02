@@ -35,3 +35,5 @@ ITEM_PIPELINES = {
 DEPTH_PRIORITY = 1
 SCHEDULER_DISK_QUEUE = 'scrapy.squeues.PickleFifoDiskQueue'
 SCHEDULER_MEMORY_QUEUE = 'scrapy.squeues.FifoMemoryQueue'
+# Evitar que la araña intente descargar PDFs gigantes (Límite 50MB)
+DOWNLOAD_MAXSIZE = 52428800
