@@ -5,7 +5,7 @@ from scrapy.exceptions import IgnoreRequest
 class MemoriaCrawlerMiddleware:
     def __init__(self):
         # Conecta (o crea) la base de datos en un archivo local llamado memoria.db
-        self.conn = sqlite3.connect('memoria_crawler.db')
+        self.conn = sqlite3.connect('datos/memoria_crawler.db')
         self.cursor = self.conn.cursor()
         
         # Crea la tabla si es la primera vez que se ejecuta
