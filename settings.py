@@ -19,3 +19,8 @@ CONCURRENT_REQUESTS = 10
 AUTOTHROTTLE_ENABLED = True
 AUTOTHROTTLE_START_DELAY = 5.0
 AUTOTHROTTLE_MAX_DELAY = 60.0
+
+# Activar nuestro Middleware personalizado
+DOWNLOADER_MIDDLEWARES = {
+    'middlewares.MemoriaCrawlerMiddleware': 543, # El número indica la prioridad (orden de ejecución)
+}
