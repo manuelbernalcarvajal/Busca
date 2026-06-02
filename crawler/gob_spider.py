@@ -27,23 +27,57 @@ class GobSpider(CrawlSpider):
         'https://www.boe.es'
     ]
 
+    # Diccionario de idiomas para denegar en las reglas principales
+    idiomas_cooficiales = (r'/ca/', r'/eu/', r'/gl/', r'/va/', r'/es-ca/', r'/es-eu/', r'/es-gl/')
+    basura_web = (r'/contacto', r'/aviso-legal', r'/accesibilidad', r'/mapa-web')
+
     rules = (
+        # REGLA 1: VIP (+10 Puntos) -> Trámites y Leyes en Español
         Rule(
             LinkExtractor(
                 allow=(r'/tramites/', r'/leyes/', r'/sede/', r'/disposiciones/'), 
-                deny=(r'/contacto', r'/aviso-legal', r'/accesibilidad') 
+                deny=idiomas_cooficiales + basura_web
             ), 
             callback='parse_documento',
-            follow=True 
+            follow=True,
+            process_request='prioridad_alta'
         ),
+        
+        # REGLA 2: NORMAL (0 Puntos) -> Resto de la web en Español
         Rule(
-            LinkExtractor(),
+            LinkExtractor(
+                deny=idiomas_cooficiales + basura_web
+            ),
             callback='parse_documento',
-            follow=True
+            follow=True,
+            process_request='prioridad_normal'
+        ),
+
+        # REGLA 3: ÚLTIMO MONO (-10 Puntos) -> Idiomas cooficiales
+        Rule(
+            LinkExtractor(
+                allow=idiomas_cooficiales
+            ),
+            callback='parse_documento',
+            follow=True,
+            process_request='prioridad_baja'
         ),
     )
 
-    # Fíjate cómo "def parse_documento" tiene 4 espacios delante para estar dentro de la clase
+    # --- Funciones de asignación de prioridad ---
+    def prioridad_alta(self, request, response):
+        request.priority = 10
+        return request
+
+    def prioridad_normal(self, request, response):
+        request.priority = 0
+        return request
+
+    def prioridad_baja(self, request, response):
+        request.priority = -10
+        return request
+
+    # --- Procesamiento del texto ---
     def parse_documento(self, response):
         textos_brutos = response.css('p::text, div.texto::text, article::text, span::text').getall()
         texto_unido = ' '.join(textos_brutos)
