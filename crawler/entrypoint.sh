@@ -13,7 +13,7 @@ while true; do
 
     # 2. Soltamos a la araña
     echo "🕷️ Rastreando..."
-    scrapy crawl gob_spider
+    scrapy runspider gob_spider.py
 
     # 3. La pausa de descanso
     # Cuando la araña termine (o si se corta), el contenedor dormirá.
