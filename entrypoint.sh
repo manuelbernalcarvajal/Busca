@@ -1,7 +1,10 @@
 #!/bin/bash
 
-echo "🚀 Iniciando el crawler ético de datos gubernamentales..."
+echo "🚀 Iniciando contenedor de indexación..."
 
-# Aquí es donde le diremos a Scrapy que arranque a trabajar
-# 'mi_spider' será el nombre del script que raspee el BOE.
-scrapy crawl mi_spider
+# 1. Ejecutamos el script que actualiza el dominios.txt
+python actualizar_dominios.py
+
+# 2. Llamamos a Scrapy usando el 'name' interno de nuestra araña
+echo "🕷️ Soltando a la araña rastreadora..."
+scrapy crawl gob_spider
