@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Buscador Oficial | Administración</title>
+    <style>
+        :root { --primary: #1a73e8; --text: #202124; --bg: #f8f9fa; --card-bg: #ffffff; }
+        body { font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: var(--bg); color: var(--text); margin: 0; padding: 0; }
+        
+        .header { background: var(--card-bg); padding: 20px; text-align: center; border-bottom: 1px solid #dadce0; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
+        .logo { font-size: 2em; font-weight: 700; color: var(--primary); letter-spacing: -0.5px; }
+        
+        .container { max-width: 900px; margin: 40px auto; padding: 0 20px; }
+        
+        /* Controles de Búsqueda y Filtros */
+        .search-container { display: flex; flex-direction: column; align-items: center; margin-bottom: 20px; gap: 15px; }
+        .search-box { width: 100%; max-width: 700px; padding: 16px 24px; font-size: 1.2em; border: 1px solid #dfe1e5; border-radius: 30px; box-shadow: 0 1px 6px rgba(32,33,36,0.1); outline: none; transition: box-shadow 0.2s; }
+        .search-box:focus { box-shadow: 0 2px 12px rgba(32,33,36,0.2); }
+        
+        .filtros-bar { display: flex; gap: 15px; align-items: center; flex-wrap: wrap; justify-content: center; }
+        select { padding: 8px 15px; border-radius: 20px; border: 1px solid #dfe1e5; background: white; font-size: 0.9em; cursor: pointer; outline: none; }
+        .checkbox-label { font-size: 0.9em; display: flex; align-items: center; gap: 5px; cursor: pointer; color: #5f6368; }
+        
+        /* Historial */
+        .historial-tags { display: flex; justify-content: center; gap: 10px; flex-wrap: wrap; margin-bottom: 30px; }
+        .tag { background: #e8eaed; color: #3c4043; padding: 6px 14px; border-radius: 16px; font-size: 0.9em; cursor: pointer; border: none; transition: background 0.2s; }
+        .tag:hover { background: #d2e3fc; color: var(--primary); }
+
+        /* Tarjetas */
+        .grid-resultados { display: flex; flex-direction: column; gap: 20px; }
+        .resultado { background: var(--card-bg); padding: 24px; border-radius: 12px; box-shadow: 0 2px 6px rgba(0,0,0,0.05); border: 1px solid #f1f3f4; }
+        .etiqueta { display: inline-block; background: #e8f0fe; color: var(--primary); padding: 4px 10px; border-radius: 6px; font-size: 0.8em; font-weight: 600; margin-bottom: 10px; }
+        .titulo { font-size: 1.3em; color: #1a0dab; margin-bottom: 10px; font-weight: 500; }
+        .texto-destacado { font-size: 1.05em; line-height: 1.6; color: #4d5156; }
+        em { background-color: #fce8e6; color: #d93025; font-style: normal; font-weight: bold; border-radius: 3px; padding: 0 2px; }
+        
+        .desplegable { margin-top: 15px; background: #f8f9fa; border-radius: 8px; padding: 10px; }
+        .desplegable summary { color: #006621; cursor: pointer; font-weight: 500; user-select: none; }
+        .desplegable ul { list-style: none; padding: 10px 0 0 10px; margin: 0; }
+        .desplegable a { color: #1a0dab; text-decoration: none; font-size: 0.95em; }
+
+        /* Banner de Cookies UE */
+        .cookie-banner { position: fixed; bottom: 0; left: 0; width: 100%; background: #202124; color: white; padding: 15px 20px; text-align: center; font-size: 0.9em; box-sizing: border-box; display: none; z-index: 1000; display: flex; justify-content: center; align-items: center; gap: 20px; flex-wrap: wrap; }
+        .cookie-btn { background: var(--primary); color: white; border: none; padding: 8px 20px; border-radius: 4px; cursor: pointer; font-weight: bold; }
+        .cookie-btn:hover { background: #1765cc; }
+    </style>
+</head>
+<body>
+
+    <header class="header">
+        <div class="logo">Buscador Oficial</div>
+    </header>
+
+    <div class="container">
+        <div class="search-container">
+            <input type="text" id="searchInput" class="search-box" placeholder="Busca leyes, trámites, ministerios..." onkeyup="manejarBusqueda(event)">
+            
+            <div class="filtros-bar">
+                <select id="filtroCategoria" onchange="ejecutarBusqueda(document.getElementById('searchInput').value)">
+                    <option value="TODAS">Todas las categorías</option>
+                    <option value="Tramite/Servicio">Trámites y Servicios</option>
+                    <option value="Legislacion/Normativa">Leyes y Normativa</option>
+                    <option value="Ayudas/Subvenciones">Ayudas y Subvenciones</option>
+                    <option value="Poder Judicial">Poder Judicial</option>
+                </select>
+
+                <label class="checkbox-label" title="Obliga al buscador a encontrar la frase exacta">
+                    <input type="checkbox" id="busquedaExacta" onchange="ejecutarBusqueda(document.getElementById('searchInput').value)">
+                    Búsqueda Exacta ("")
+                </label>
+            </div>
+        </div>
+        
+        <div class="historial-tags" id="historialDiv"></div>
+        <div id="panelPrincipal"></div>
+    </div>
+
+    <div class="cookie-banner" id="cookieBanner">
+        <span>Utilizamos cookies técnicas locales para guardar tu historial de búsqueda. No rastreamos datos personales.</span>
+        <button class="cookie-btn" onclick="aceptarCookies()">Entendido</button>
+    </div>
+
+    <script>
+        const MEILI_URL = 'http://localhost:7700'; 
+        const MEILI_KEY = 'SuperSecreta123'; 
+        const INDICE = 'documentos_legales';
+
+        document.addEventListener("DOMContentLoaded", () => {
+            comprobarCookies();
+            pintarHistorial();
+            cargarNovedades();
+        });
+
+        // --- SISTEMA DE COOKIES (UE) ---
+        function comprobarCookies() {
+            if (!localStorage.getItem('cookiesAceptadas')) {
+                document.getElementById('cookieBanner').style.display = 'flex';
+            } else {
+                document.getElementById('cookieBanner').style.display = 'none';
+            }
+        }
+        function aceptarCookies() {
+            localStorage.setItem('cookiesAceptadas', 'true');
+            document.getElementById('cookieBanner').style.display = 'none';
+        }
+
+        // --- HISTORIAL ---
+        function guardarEnHistorial(busqueda) {
+            if (!busqueda || !localStorage.getItem('cookiesAceptadas')) return;
+            let historial = JSON.parse(localStorage.getItem('historialBuscador') || '[]');
+            historial = historial.filter(item => item !== busqueda);
+            historial.unshift(busqueda);
+            localStorage.setItem('historialBuscador', JSON.stringify(historial.slice(0, 5)));
+            pintarHistorial();
+        }
+        function pintarHistorial() {
+            let historial = JSON.parse(localStorage.getItem('historialBuscador') || '[]');
+            document.getElementById('historialDiv').innerHTML = historial.map(b => 
+                `<button class="tag" onclick="buscarDesdeHistorial('${b}')">🕒 ${b}</button>`
+            ).join('');
+        }
+        function buscarDesdeHistorial(busqueda) {
+            document.getElementById('searchInput').value = busqueda;
+            ejecutarBusqueda(busqueda);
+        }
+
+        // --- MOTOR DE BÚSQUEDA ---
+        function manejarBusqueda(evento) {
+            const query = document.getElementById('searchInput').value.trim();
+            if (evento.key === 'Enter') {
+                if (query.length > 0) ejecutarBusqueda(query);
+                else cargarNovedades();
+            }
+        }
+
+        async function ejecutarBusqueda(query) {
+            if (!query) return;
+            guardarEnHistorial(query);
+            
+            const panel = document.getElementById('panelPrincipal');
+            const categoria = document.getElementById('filtroCategoria').value;
+            const esExacta = document.getElementById('busquedaExacta').checked;
+            
+            // Si es búsqueda exacta, Meilisearch requiere comillas dobles
+            const queryFinal = esExacta ? `"${query}"` : query;
+            
+            // Construimos los filtros si no está en "TODAS"
+            const bodyPeticion = {
+                q: queryFinal,
+                attributesToHighlight: ["contenido"], 
+                attributesToCrop: ["contenido:40"], 
+                cropMarker: "..."
+            };
+            
+            if (categoria !== "TODAS") {
+                bodyPeticion.filter = [`categoria = '${categoria}'`];
+            }
+
+            panel.innerHTML = '<p style="text-align:center;">Buscando...</p>';
+            
+            try {
+                const respuesta = await fetch(`${MEILI_URL}/indexes/${INDICE}/search`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${MEILI_KEY}` },
+                    body: JSON.stringify(bodyPeticion)
+                });
+                const datos = await respuesta.json();
+                
+                if (datos.hits.length === 0) {
+                    panel.innerHTML = `<p style="text-align:center; color:#d93025;">No se encontraron resultados. Prueba a desactivar filtros.</p>`;
+                    return;
+                }
+                panel.innerHTML = generarHTMLResultados(datos.hits);
+            } catch (error) {
+                console.error(error);
+                panel.innerHTML = '<p style="text-align:center; color:red;">Error de conexión.</p>';
+            }
+        }
+
+        async function cargarNovedades() {
+            try {
+                const respuesta = await fetch(`${MEILI_URL}/indexes/${INDICE}/search`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${MEILI_KEY}` },
+                    body: JSON.stringify({ q: "", sort: ["fecha_indexacion:desc"], limit: 5 })
+                });
+                const datos = await respuesta.json();
+                document.getElementById('panelPrincipal').innerHTML = `<h3 style="color:#5f6368;">🔥 Últimas Leyes Procesadas</h3>` + generarHTMLResultados(datos.hits);
+            } catch (e) {}
+        }
+
+        function generarHTMLResultados(hits) {
+            const agrupados = {};
+            hits.forEach(hit => {
+                const titulo = hit.titulo;
+                if (!agrupados[titulo]) {
+                    agrupados[titulo] = {
+                        categoria: hit.categoria,
+                        texto: hit._formatted ? hit._formatted.contenido : hit.contenido.substring(0, 200) + '...',
+                        enlaces: []
+                    };
+                }
+                agrupados[titulo].enlaces.push({ url: hit.url, dominio: hit.dominio });
+            });
+
+            return '<div class="grid-resultados">' + Object.entries(agrupados).map(([titulo, info]) => `
+                <div class="resultado">
+                    <span class="etiqueta">${info.categoria}</span>
+                    <div class="titulo">${titulo}</div>
+                    <div class="texto-destacado">${info.texto}</div>
+                    <details class="desplegable">
+                        <summary>Fuentes oficiales (${info.enlaces.length})</summary>
+                        <ul>${info.enlaces.map(e => `<li>🔗 <a href="${e.url}" target="_blank">${e.dominio}</a></li>`).join('')}</ul>
+                    </details>
+                </div>
+            `).join('') + '</div>';
+        }
+    </script>
+</body>
+</html>
