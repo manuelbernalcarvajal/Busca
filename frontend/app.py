@@ -46,5 +46,16 @@ def buscar():
     except Exception as e:
         return jsonify({"error": "Error interno del servidor"}), 500
 
+# 3. El Chivato de Estadísticas (Para el contador en tiempo real)
+@app.route('/api/stats', methods=['GET'])
+def stats():
+    headers = {'Authorization': f'Bearer {MEILISEARCH_KEY}'}
+    try:
+        url_interna = f"{MEILISEARCH_URL}/indexes/{INDICE}/stats"
+        respuesta = requests.get(url_interna, headers=headers, timeout=5)
+        return jsonify(respuesta.json())
+    except Exception:
+        return jsonify({"numberOfDocuments": 0})
+
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=80)
