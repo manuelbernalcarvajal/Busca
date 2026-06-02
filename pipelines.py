@@ -4,21 +4,46 @@ import os
 
 class ProcesadorGobiernoPipeline:
     
+import requests
+import re
+import os
+from datetime import datetime
+
+class ProcesadorGobiernoPipeline:
+    
     def __init__(self):
-        # Configuraremos estas variables de entorno luego en el docker-compose
         self.meilisearch_url = os.getenv('MEILISEARCH_URL', 'http://meilisearch:7700')
-        self.meilisearch_key = os.getenv('MEILISEARCH_KEY', 'masterKeySecreta123')
+        self.meilisearch_key = os.getenv('MEILISEARCH_KEY', 'SuperSecreta123')
         self.indice = 'documentos_legales'
+        self.configurado = False
+
+    def configurar_indice(self, spider):
+        # Le decimos a Meilisearch qué campos sirven para Filtrar y Ordenar
+        headers = {'Authorization': f'Bearer {self.meilisearch_key}'}
+        config = {
+            "filterableAttributes": ["categoria", "dominio"],
+            "sortableAttributes": ["fecha_web", "fecha_indexacion"]
+        }
+        requests.patch(
+            f"{self.meilisearch_url}/indexes/{self.indice}/settings", 
+            headers=headers, json=config
+        )
+        self.configurado = True
+        spider.logger.info("⚙️ Índice de Meilisearch configurado con filtros y fechas.")
 
     def process_item(self, item, spider):
-        # --- FASE 1: PRECLASIFICACIÓN (Tu motor ligero) ---
-        item['categoria'] = self.clasificar(item['url'], item['titulo'], item['contenido'])
+        if not self.configurado:
+            self.configurar_indice(spider)
 
-        # --- FASE 2: ENVIAR A MEILISEARCH (La API) ---
-        self.enviar_a_meilisearch(item, spider)
+        item['categoria'] = self.clasificar(item['url'], item['titulo'], item['contenido'])
         
+        # Generamos la fecha exacta de "ahora mismo" en formato ISO (UTC)
+        item['fecha_indexacion'] = datetime.utcnow().strftime('%Y-%m-%dT%H:%M:%SZ')
+
+        self.enviar_a_meilisearch(item, spider)
         return item
 
+    # ... (El resto de métodos clasificar y enviar_a_meilisearch se quedan igual) ...
     def clasificar(self, url, titulo, contenido):
         texto_total = f"{url} {titulo} {contenido}".lower()
         
