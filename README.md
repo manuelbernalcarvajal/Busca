@@ -2,8 +2,6 @@
 
 YALm recomendado:
 ```
-version: '3.8'
-
 services:
   # 1. EL CEREBRO
   meilisearch:
@@ -16,11 +14,16 @@ services:
       # Conectamos el volumen de Docker a la carpeta interna de Meilisearch
       - meili_data:/meili_data 
     restart: unless-stopped
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "30m"   # Máximo 10 megas por archivo
+        max-file: "3"
 
   # 2. EL TRABAJADOR
   crawler:
     image: ghcr.io/manuelbernalcarvajal/busca-crawler:${APP_VERSION}
-    container_name: araña-gobierno
+    container_name: arana-gobierno
     environment:
       - MEILISEARCH_URL=http://meilisearch:7700
       - MEILISEARCH_KEY=${MEILI_MASTER_KEY}
@@ -30,6 +33,11 @@ services:
     depends_on:
       - meilisearch
     restart: unless-stopped
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "30m"   # Máximo 10 megas por archivo
+        max-file: "3"
 
   # 3. EL ESCUDO
   frontend:
@@ -43,6 +51,11 @@ services:
     depends_on:
       - meilisearch
     restart: unless-stopped
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"   # Máximo 10 megas por archivo
+        max-file: "3"
 
 # Aquí declaramos los volúmenes gestionados por Docker
 volumes:
