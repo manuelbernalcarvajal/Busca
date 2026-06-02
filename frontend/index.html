@@ -82,9 +82,8 @@
     </div>
 
     <script>
-        const MEILI_URL = 'http://localhost:7700'; 
-        const MEILI_KEY = 'SuperSecreta123'; 
-        const INDICE = 'documentos_legales';
+        // ¡Magia! Ya no hay contraseñas ni URLs de la base de datos aquí.
+        // Somos totalmente inmunes a mirones.
 
         document.addEventListener("DOMContentLoaded", () => {
             comprobarCookies();
@@ -142,10 +141,8 @@
             const categoria = document.getElementById('filtroCategoria').value;
             const esExacta = document.getElementById('busquedaExacta').checked;
             
-            // Si es búsqueda exacta, Meilisearch requiere comillas dobles
             const queryFinal = esExacta ? `"${query}"` : query;
             
-            // Construimos los filtros si no está en "TODAS"
             const bodyPeticion = {
                 q: queryFinal,
                 attributesToHighlight: ["contenido"], 
@@ -160,14 +157,15 @@
             panel.innerHTML = '<p style="text-align:center;">Buscando...</p>';
             
             try {
-                const respuesta = await fetch(`${MEILI_URL}/indexes/${INDICE}/search`, {
+                // ATACAMOS A NUESTRO PROPIO SERVIDOR DE PYTHON
+                const respuesta = await fetch('/api/buscar', {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${MEILI_KEY}` },
+                    headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(bodyPeticion)
                 });
                 const datos = await respuesta.json();
                 
-                if (datos.hits.length === 0) {
+                if (!datos.hits || datos.hits.length === 0) {
                     panel.innerHTML = `<p style="text-align:center; color:#d93025;">No se encontraron resultados. Prueba a desactivar filtros.</p>`;
                     return;
                 }
@@ -180,13 +178,17 @@
 
         async function cargarNovedades() {
             try {
-                const respuesta = await fetch(`${MEILI_URL}/indexes/${INDICE}/search`, {
+                // ATACAMOS A NUESTRO PROPIO SERVIDOR DE PYTHON
+                const respuesta = await fetch('/api/buscar', {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${MEILI_KEY}` },
+                    headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ q: "", sort: ["fecha_indexacion:desc"], limit: 5 })
                 });
                 const datos = await respuesta.json();
-                document.getElementById('panelPrincipal').innerHTML = `<h3 style="color:#5f6368;">🔥 Últimas Leyes Procesadas</h3>` + generarHTMLResultados(datos.hits);
+                
+                if(datos.hits && datos.hits.length > 0) {
+                    document.getElementById('panelPrincipal').innerHTML = `<h3 style="color:#5f6368;">🔥 Últimas Leyes Procesadas</h3>` + generarHTMLResultados(datos.hits);
+                }
             } catch (e) {}
         }
 
