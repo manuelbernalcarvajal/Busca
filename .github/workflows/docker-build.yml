@@ -1,0 +1,39 @@
+name: Construir y Subir Crawler a GHCR
+
+# Esto le dice a GitHub: "Ejecuta esto cada vez que el usuario suba código a la rama main"
+on:
+  release:
+    types: [published]
+  workflow_dispatch: 
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+    
+    # Permisos necesarios para que GitHub Actions pueda guardar la imagen en tu cuenta
+    permissions:
+      contents: read
+      packages: write 
+
+    steps:
+      - name: 📥 Descargar el código
+        uses: actions/checkout@v3
+
+      - name: 🔑 Iniciar sesión en el Registro de GitHub
+        uses: docker/login-action@v2
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          # El token se genera automáticamente, no tienes que poner tu contraseña
+          password: ${{ secrets.GITHUB_TOKEN }} 
+
+      - name: 🔠 Convertir el nombre del repositorio a minúsculas (Docker lo exige)
+        run: echo "REPO=${GITHUB_REPOSITORY,,}" >>${GITHUB_ENV}
+
+      - name: 🐳 Construir y Subir la imagen Docker
+        uses: docker/build-push-action@v4
+        with:
+          context: .
+          push: true
+          # Tu imagen quedará guardada como: ghcr.io/tu-usuario/tu-repo:latest
+          tags: ghcr.io/${{ env.REPO }}:latest
