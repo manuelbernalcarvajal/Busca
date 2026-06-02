@@ -54,10 +54,10 @@ jobs:
       # -----------------------------------------------------------
       # CONSTRUIR IMAGEN 2: FRONTEND
       # -----------------------------------------------------------
-      - name: 🛡️ Construir y Subir FRONTEND
-        uses: docker/build-push-action@v4
-        with:
-          context: ./frontend
-          platforms: linux/amd64,linux/arm64
-          push: true
-          tags: ghcr.io/${{ env.REPO }}-frontend:latest
+     # - name: 🛡️ Construir y Subir FRONTEND
+     #   uses: docker/build-push-action@v4
+     #   with:
+      #    context: ./frontend
+       #   platforms: linux/amd64,linux/arm64
+        #  push: true
+         # tags: ghcr.io/${{ env.REPO }}-frontend:latest
