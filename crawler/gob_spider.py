@@ -1,8 +1,14 @@
 import scrapy
 from scrapy.spiders import CrawlSpider, Rule
 from scrapy.linkextractors import LinkExtractor
+from scrapy.linkextractors import IGNORED_EXTENSIONS
 import os
 import re
+import io
+from pypdf import PdfReader # ¡Nuestro lector de PDFs en RAM!
+
+# 1. Le decimos a Scrapy que deje de ignorar los PDFs por defecto
+EXTENSIONES_PERMITIDAS = [ext for ext in IGNORED_EXTENSIONS if ext != 'pdf']
 
 def limpiar_texto(texto_bruto):
     if not texto_bruto:
@@ -16,7 +22,7 @@ def cargar_dominios_permitidos():
         with open(ruta_archivo, 'r', encoding='utf-8') as f:
             return [linea.strip() for linea in f if linea.strip()]
     except FileNotFoundError:
-        return ['boe.es']
+        return ['boe.es', 'poderjudicial.es']
 
 class GobSpider(CrawlSpider):
     name = 'gob_spider'
@@ -24,67 +30,96 @@ class GobSpider(CrawlSpider):
     
     start_urls = [
         'https://administracion.gob.es/pag_Home/atencionCiudadana/SedesElectronicas-y-Webs-Publicas.html',
-        'https://www.boe.es'
+        'https://www.boe.es',
+        'https://www.poderjudicial.es'
     ]
 
-    # Diccionario de idiomas para denegar en las reglas principales
     idiomas_cooficiales = (r'/ca/', r'/eu/', r'/gl/', r'/va/', r'/es-ca/', r'/es-eu/', r'/es-gl/')
     basura_web = (r'/contacto', r'/aviso-legal', r'/accesibilidad', r'/mapa-web')
 
     rules = (
-        # REGLA 1: VIP (+10 Puntos) -> Trámites y Leyes en Español
+        # Añadimos deny_extensions para que SÍ siga los enlaces .pdf
         Rule(
             LinkExtractor(
-                allow=(r'/tramites/', r'/leyes/', r'/sede/', r'/disposiciones/'), 
-                deny=idiomas_cooficiales + basura_web
+                allow=(r'/tramites/', r'/leyes/', r'/sede/', r'/disposiciones/', r'\.pdf$'), 
+                deny=idiomas_cooficiales + basura_web,
+                deny_extensions=EXTENSIONES_PERMITIDAS
             ), 
             callback='parse_documento',
             follow=True,
-            process_request='prioridad_alta'
+            process_request='asignar_prioridad_alta'
         ),
         
-        # REGLA 2: NORMAL (0 Puntos) -> Resto de la web en Español
         Rule(
             LinkExtractor(
-                deny=idiomas_cooficiales + basura_web
+                deny=idiomas_cooficiales + basura_web,
+                deny_extensions=EXTENSIONES_PERMITIDAS
             ),
             callback='parse_documento',
             follow=True,
-            process_request='prioridad_normal'
+            process_request='asignar_prioridad_normal'
         ),
 
-        # REGLA 3: ÚLTIMO MONO (-10 Puntos) -> Idiomas cooficiales
         Rule(
             LinkExtractor(
-                allow=idiomas_cooficiales
+                allow=idiomas_cooficiales,
+                deny_extensions=EXTENSIONES_PERMITIDAS
             ),
             callback='parse_documento',
             follow=True,
-            process_request='prioridad_baja'
+            process_request='asignar_prioridad_baja'
         ),
     )
 
-    # --- Funciones de asignación de prioridad ---
-    def prioridad_alta(self, request, response):
-        request.priority = 10
+    # --- MOTOR DE PRIORIDADES (El clasificador de años) ---
+    def calcular_bonus_ano(self, url):
+        # Busca años en la URL
+        if re.search(r'202[0-9]', url):
+            return 20  # +20 para cosas de esta década (2020-2029)
+        elif re.search(r'201[0-9]', url):
+            return 5   # +5 para la década pasada (2010-2019)
+        elif re.search(r'19[0-9]{2}', url):
+            return -20 # -20 para cosas del milenio pasado (1900-1999)
+        return 0
+
+    def asignar_prioridad_alta(self, request, response):
+        request.priority = 10 + self.calcular_bonus_ano(request.url)
         return request
 
-    def prioridad_normal(self, request, response):
-        request.priority = 0
+    def asignar_prioridad_normal(self, request, response):
+        request.priority = 0 + self.calcular_bonus_ano(request.url)
         return request
 
-    def prioridad_baja(self, request, response):
-        request.priority = -10
+    def asignar_prioridad_baja(self, request, response):
+        # Los idiomas cooficiales siempre castigados, sean del año que sean
+        request.priority = -10 
         return request
 
-    # --- Procesamiento del texto ---
+    # --- LECTOR HÍBRIDO (HTML y PDF) ---
     def parse_documento(self, response):
-        textos_brutos = response.css('p::text, div.texto::text, article::text, span::text').getall()
-        texto_unido = ' '.join(textos_brutos)
+        # 1. Comprobamos si es un PDF (por extensión o por cabecera del servidor)
+        es_pdf = response.url.lower().endswith('.pdf') or b'application/pdf' in response.headers.get('Content-Type', b'')
+
+        if es_pdf:
+            try:
+                # Leemos el PDF directamente desde la RAM (BytesIO)
+                lector = PdfReader(io.BytesIO(response.body))
+                # Extraemos el texto de todas las páginas y lo unimos
+                texto_unido = " ".join([page.extract_text() for page in lector.pages if page.extract_text()])
+                # Usamos el nombre del archivo como título
+                titulo_limpio = response.url.split('/')[-1] 
+            except Exception as e:
+                self.logger.error(f"❌ Error leyendo PDF en RAM ({response.url}): {e}")
+                return
+        else:
+            # 2. Si es una web normal (HTML)
+            textos_brutos = response.css('p::text, div.texto::text, article::text, span::text').getall()
+            texto_unido = ' '.join(textos_brutos)
+            titulo_limpio = limpiar_texto(response.css('title::text').get(default='Sin título'))
         
         texto_limpio = limpiar_texto(texto_unido)
-        titulo_limpio = limpiar_texto(response.css('title::text').get(default='Sin título'))
         
+        # Filtro de calidad: si tiene menos de 200 letras, no nos sirve
         if len(texto_limpio) > 200:
             yield {
                 'url': response.url,
