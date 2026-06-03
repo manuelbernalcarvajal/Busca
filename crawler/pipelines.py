@@ -1,6 +1,7 @@
 import requests
 import re
 import os
+import hashlib # <--- Añadimos la librería nativa para crear la huella dactilar
 from datetime import datetime
 
 class ProcesadorGobiernoPipeline:
@@ -37,7 +38,6 @@ class ProcesadorGobiernoPipeline:
         self.enviar_a_meilisearch(item, spider)
         return item
 
-    # ... (El resto de métodos clasificar y enviar_a_meilisearch se quedan igual) ...
     def clasificar(self, url, titulo, contenido):
         texto_total = f"{url} {titulo} {contenido}".lower()
         
@@ -59,9 +59,12 @@ class ProcesadorGobiernoPipeline:
             'Content-Type': 'application/json'
         }
         
-        # Meilisearch necesita que cada documento tenga un ID único. 
-        # Usamos la URL limpiándola para que sirva de ID.
-        doc_id = re.sub(r'[^a-zA-Z0-9]', '', item['url'])
+        # 👇 EL MÉTODO GOOGLE: HUELLA DACTILAR DEL CONTENIDO 👇
+        # Juntamos título y contenido para crear una firma única
+        texto_para_firma = f"{item['titulo']} {item['contenido']}"
+        
+        # Generamos un ID alfanumérico único basado en el texto (MD5 Hash)
+        doc_id = hashlib.md5(texto_para_firma.encode('utf-8')).hexdigest()
         item['id'] = doc_id
         
         # 👇 LA MAGIA PARA CALLAR A MEILISEARCH 👇
