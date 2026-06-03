@@ -11,53 +11,67 @@ print("🧠 Cargando modelo de IA...")
 model = SentenceTransformer('paraphrase-multilingual-MiniLM-L12-v2')
 client = meilisearch.Client(MEILISEARCH_URL, MEILISEARCH_KEY)
 index = client.index(INDICE)
+
+def asegurar_configuracion():
+    print("🛠️ Verificando configuración de Meilisearch...")
+    # 1. Asegurar filterableAttributes
+    settings = index.get_settings()
+    filterable = settings.get('filterableAttributes', [])
+    if '_vectors' not in filterable:
+        print("🔧 Configurando _vectors como filtrable...")
+        index.update_filterable_attributes(filterable + ['_vectors'])
+    
+    # 2. Asegurar Embedders
+    if not settings.get('embedders'):
+        print("🔧 Configurando Embedders...")
+        index.update_settings({"embedders": {"default": {"source": "userProvided", "dimensions": 384}}})
+
+asegurar_configuracion()
 print("✅ Listo para vectorizar y agrupar.")
 
 def vectorizar_batch():
     try:
-        # Buscamos documentos vírgenes (sin vector)
-        print("🔍 Buscando documentos pendientes...")
-        docs = index.search('', {'filter': '_vectors IS NULL', 'limit': 10})
+        # Buscamos documentos (quitamos el filtro estricto por ahora)
+        print("🔍 Buscando documentos...")
+        docs = index.search('', {'limit': 20})
         
-        if not docs.get('hits'):
-            print("💤 No hay documentos nuevos, durmiendo...")
+        # Filtramos en Python los que NO tienen vectores (es más seguro)
+        documentos_pendientes = [d for d in docs['hits'] if '_vectors' not in d]
+        
+        if not documentos_pendientes:
+            print("💤 No hay documentos pendientes, durmiendo...")
             return False
 
+        print(f"🔄 Encontrados {len(documentos_pendientes)} documentos para procesar.")
+        
         documentos_actualizados = []
-        for doc in docs['hits']:
+        for doc in documentos_pendientes:
             print(f"🔄 Procesando: {doc.get('titulo', '')[:50]}...")
             vector = model.encode(doc['contenido']).tolist()
             
-            # --- EL RADAR DE CLONES SEMÁNTICOS ---
-            grupo_id = doc['id'] # Por defecto, creamos un grupo nuevo
+            grupo_id = doc['id'] 
             
-            # Buscamos en Meilisearch si ya hay algo idéntico (usando el vector)
+            # Busqueda de clones
             busqueda_clones = index.search('', {
                 'vector': vector,
                 'limit': 1,
-                'filter': '_vectors IS NOT NULL', # Solo comparamos con los que ya tienen IA
                 'showRankingScore': True
             })
             
             if busqueda_clones.get('hits'):
                 mejor_clon = busqueda_clones['hits'][0]
-                similitud = mejor_clon.get('_rankingScore', 0)
-                print("Clones encontrados")
-                
-                # 0.90 es una similitud brutal (Ej: Ley Base vs Ley de Reforma)
-                if similitud > 0.90:
-                    # Heredamos el ID de grupo del documento padre
+                if mejor_clon.get('_rankingScore', 0) > 0.90:
                     grupo_id = mejor_clon.get('grupo_id', mejor_clon['id'])
-                    print(f"   🔗 ¡Grupo encontrado! Similitud: {similitud:.2f}")
+                    print(f"   🔗 ¡Grupo encontrado!")
 
-            # Preparamos la actualización
             documentos_actualizados.append({
                 'id': doc['id'], 
                 '_vectors': vector,
-                'grupo_id': grupo_id # Etiqueta mágica para el Frontend
+                'grupo_id': grupo_id
             })
             
         index.update_documents(documentos_actualizados)
+        print("✅ Batch actualizado con éxito.")
         return True
 
     except Exception as e:
@@ -67,7 +81,6 @@ def vectorizar_batch():
 
 while True:
     if not vectorizar_batch():
-        print("No vectrorizar_bath() sleep 60
         time.sleep(60)
     else:
         time.sleep(2)
