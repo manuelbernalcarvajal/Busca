@@ -15,12 +15,17 @@ index = client.index(INDICE)
 def asegurar_configuracion():
     print("🛠️ Verificando configuración de Meilisearch...")
     
-    # 1. Asegurar filterableAttributes
+    # 1. Asegurar filterableAttributes (AÑADIMOS AMBOS: _vectors y estado_ia)
     settings = index.get_settings()
     filterable = settings.get('filterableAttributes', [])
-    if '_vectors' not in filterable:
-        print("🔧 Configurando _vectors como filtrable y esperando...")
-        tarea_filtros = index.update_filterable_attributes(filterable + ['_vectors'])
+    
+    # Usamos set() para unir la configuración actual con los que necesitamos sin duplicar
+    nuevos_filtros = list(set(filterable + ['_vectors', 'estado_ia']))
+    
+    # Solo actualizamos si Meilisearch no los tiene ya
+    if sorted(filterable) != sorted(nuevos_filtros):
+        print("🔧 Configurando filtros (_vectors y estado_ia) y esperando...")
+        tarea_filtros = index.update_filterable_attributes(nuevos_filtros)
         client.wait_for_task(tarea_filtros.task_uid) # <-- MAGIA ASÍNCRONA
     
     # 2. Asegurar Embedders
