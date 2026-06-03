@@ -15,16 +15,17 @@ index = client.index(INDICE)
 def asegurar_configuracion():
     print("🛠️ Verificando configuración de Meilisearch...")
     
-    # 1. Asegurar filterableAttributes (Incluimos _vectors)
+    # 1. Asegurar filterableAttributes
     settings = index.get_settings()
     filterable = settings.get('filterableAttributes', [])
     if '_vectors' not in filterable:
-        print("🔧 Configurando _vectors como filtrable...")
-        index.update_filterable_attributes(filterable + ['_vectors'])
+        print("🔧 Configurando _vectors como filtrable y esperando...")
+        tarea_filtros = index.update_filterable_attributes(filterable + ['_vectors'])
+        client.wait_for_task(tarea_filtros.task_uid) # <-- MAGIA ASÍNCRONA
     
-    # 2. Asegurar Embedders (La configuración que hacías con curl)
-    # Esto es exactamente lo mismo que tu comando PATCH
-    index.update_settings({
+    # 2. Asegurar Embedders
+    print("🔧 Aplicando configuración de embedders y esperando...")
+    tarea_embedders = index.update_settings({
         "embedders": {
             "default": {
                 "source": "userProvided", 
@@ -32,19 +33,23 @@ def asegurar_configuracion():
             }
         }
     })
-    print("✅ Configuración de vectores aplicada desde Python.")
+    client.wait_for_task(tarea_embedders.task_uid) # <-- MAGIA ASÍNCRONA
+    print("✅ Configuración de vectores aplicada y confirmada desde Python.")
 
 asegurar_configuracion()
 print("✅ Listo para vectorizar y agrupar.")
 
 def vectorizar_batch():
     try:
-        # Buscamos documentos (quitamos el filtro estricto por ahora)
         print("🔍 Buscando documentos...")
-        docs = index.search('', {'limit': 20})
         
-        # Filtramos en Python los que NO tienen vectores (es más seguro)
-        documentos_pendientes = [d for d in docs['hits'] if '_vectors' not in d]
+        # Le pedimos a Meilisearch SOLO los que tienen el vector vacío
+        docs = index.search('', {
+            'limit': 20,
+            'filter': '_vectors.default IS NULL'  # <-- FILTRO NATIVO REPARADO
+        })
+        
+        documentos_pendientes = docs['hits']
         
         if not documentos_pendientes:
             print("💤 No hay documentos pendientes, durmiendo...")
