@@ -1,8 +1,6 @@
 name: Construir y Subir Imágenes vectorizer
 
 on:
-  release:
-    types: [published]
   workflow_dispatch: 
 
 jobs:
