@@ -85,7 +85,7 @@ class GobSpider(CrawlSpider):
         Rule(
             LinkExtractor(
                 allow=idiomas_cooficiales,
-                deny_extensions=EXTENSIONES_PERMITIDAS
+                deny_extensions=EXTENSIONES_PERMITIDAS,
                 process_value=amputar_parametros_basura  # <--- EL FRANCOTIRADOR 🔫
             ),
             callback='parse_documento',
