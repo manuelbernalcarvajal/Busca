@@ -64,6 +64,7 @@ def vectorizar_batch():
                 'vector': vector,
                 'limit': 1,
                 'showRankingScore': True
+                'hybrid': {'semanticRatio': 1.0}
             })
             
             if busqueda_clones.get('hits'):
