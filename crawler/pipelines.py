@@ -65,7 +65,8 @@ class ProcesadorGobiernoPipeline:
         item['id'] = doc_id
         
         # 👇 LA MAGIA PARA CALLAR A MEILISEARCH 👇
-        item['_vectors'] = {"default": None}  # En Python usamos None, que se traduce a null en JSON
+        item['_vectors'] = {"default": None}
+        item['estado_ia'] = 'pendiente'  # <--- NUESTRO TICKET DE TURNO
         
         url_api = f"{self.meilisearch_url}/indexes/{self.indice}/documents"
         
