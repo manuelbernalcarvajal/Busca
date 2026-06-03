@@ -31,7 +31,8 @@ class GobSpider(CrawlSpider):
     start_urls = [
         'https://administracion.gob.es/pag_Home/atencionCiudadana/SedesElectronicas-y-Webs-Publicas.html',
         'https://www.boe.es',
-        'https://www.poderjudicial.es'
+        'https://www.poderjudicial.es',
+        'https://www.tribunalconstitucional.es/es/Paginas/default.aspx'
     ]
 
     idiomas_cooficiales = (r'/ca/', r'/eu/', r'/gl/', r'/va/', r'/es-ca/', r'/es-eu/', r'/es-gl/')
@@ -95,32 +96,50 @@ class GobSpider(CrawlSpider):
         request.priority = -10 
         return request
 
-    # --- LECTOR HÍBRIDO (HTML y PDF) ---
+   # --- LECTOR HÍBRIDO (HTML y PDF) ---
     def parse_documento(self, response):
         # 1. Comprobamos si es un PDF (por extensión o por cabecera del servidor)
         es_pdf = response.url.lower().endswith('.pdf') or b'application/pdf' in response.headers.get('Content-Type', b'')
 
         if es_pdf:
             try:
-                # Leemos el PDF directamente desde la RAM (BytesIO)
+                # Leemos el PDF directamente desde la RAM
                 lector = PdfReader(io.BytesIO(response.body))
-                # Extraemos el texto de todas las páginas y lo unimos
                 texto_unido = " ".join([page.extract_text() for page in lector.pages if page.extract_text()])
-                # Usamos el nombre del archivo como título
                 titulo_limpio = response.url.split('/')[-1] 
             except Exception as e:
                 self.logger.error(f"❌ Error leyendo PDF en RAM ({response.url}): {e}")
                 return
         else:
             # 2. Si es una web normal (HTML)
-            textos_brutos = response.css('p::text, div.texto::text, article::text, span::text').getall()
+            # Quitamos los 'span::text' porque suelen arrastrar menús y basura
+            textos_brutos = response.css('p::text, div.texto::text, article::text, main::text').getall()
             texto_unido = ' '.join(textos_brutos)
             titulo_limpio = limpiar_texto(response.css('title::text').get(default='Sin título'))
         
         texto_limpio = limpiar_texto(texto_unido)
         
-        # Filtro de calidad: si tiene menos de 200 letras, no nos sirve
-        if len(texto_limpio) > 200:
+        # =========================================================
+        # 🧠 EL SENTIDO COMÚN (Filtros Anti-Basura)
+        # =========================================================
+        titulo_minusculas = titulo_limpio.lower()
+        texto_minusculas = texto_limpio.lower()
+
+        # A) Filtro Anti-Soft 404 (Páginas de error disfrazadas)
+        errores = ['404', 'no encontrada', 'no existe', 'error', 'page not found']
+        if any(e in titulo_minusculas for e in errores):
+            self.logger.info(f"🗑️ Basura descartada (Error 404 oculto): {response.url}")
+            return
+
+        # B) Filtro Anti-Monstruo de las Galletas
+        # Si menciona cookies y el texto total es corto, es que solo capturó el banner
+        if "utilizamos cookies" in texto_minusculas and len(texto_limpio) < 800:
+            self.logger.info(f"🍪 Basura descartada (Solo capturó banner de Cookies): {response.url}")
+            return
+
+        # C) Nivel de exigencia general
+        # Un documento legal de verdad tiene mucha letra. Subimos el límite a 500 caracteres.
+        if len(texto_limpio) > 500:
             yield {
                 'url': response.url,
                 'titulo': titulo_limpio,
@@ -128,3 +147,5 @@ class GobSpider(CrawlSpider):
                 'contenido': texto_limpio,
                 'longitud_caracteres': len(texto_limpio) 
             }
+        else:
+            self.logger.info(f"🤏 Descartado por corto ({len(texto_limpio)} chars): {response.url}")
