@@ -46,13 +46,15 @@ services:
     environment:
       - MEILISEARCH_URL=http://meilisearch:7700
       - MEILISEARCH_KEY=${MEILI_MASTER_KEY}
+      - HF_HOME=/huggingface_cache                # <--- NUEVO: Obligamos a HF a usar esta ruta
+      - SENTENCE_TRANSFORMERS_HOME=/huggingface_cache # <--- NUEVO: Por si usa una versión antigua
     ports:
       - "${FRONTEND_PORT}:80" 
     depends_on:
       - meilisearch
     restart: unless-stopped
     volumes:
-      - huggingface_cache:/root/.cache/huggingface
+      - huggingface_cache:/huggingface_cach
     logging:
       driver: "json-file"
       options:
@@ -67,11 +69,13 @@ services:
       - PYTHONUNBUFFERED=1  # <--- AÑADE ESTO
       - MEILISEARCH_URL=http://meilisearch:7700
       - MEILISEARCH_KEY=${MEILI_MASTER_KEY}
+      - HF_HOME=/huggingface_cache                # <--- NUEVO: Obligamos a HF a usar esta ruta
+      - SENTENCE_TRANSFORMERS_HOME=/huggingface_cache # <--- NUEVO: Por si usa una versión antigua
     depends_on:
       - meilisearch
     restart: unless-stopped
     volumes:
-      - huggingface_cache:/root/.cache/huggingface
+      - huggingface_cache:/huggingface_cach
     # LÍMITES DOCKER: Le ponemos una correa corta
     deploy:
       resources:
