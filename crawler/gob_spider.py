@@ -28,12 +28,13 @@ class GobSpider(CrawlSpider):
     name = 'gob_spider'
     allowed_domains = cargar_dominios_permitidos()
     
+    # 1. Ponemos PRIMERO tus páginas VIP (El BOE, los directorios...)
     start_urls = [
         'https://administracion.gob.es/pag_Home/atencionCiudadana/SedesElectronicas-y-Webs-Publicas.html',
         'https://www.boe.es',
         'https://www.poderjudicial.es',
         'https://www.tribunalconstitucional.es/es/Paginas/default.aspx'
-    ]
+    ] + [f"https://{dominio}" for dominio in allowed_domains]
 
     idiomas_cooficiales = (r'/ca/', r'/eu/', r'/gl/', r'/va/', r'/es-ca/', r'/es-eu/', r'/es-gl/')
     basura_web = (r'/contacto', r'/aviso-legal', r'/accesibilidad', r'/mapa-web')
