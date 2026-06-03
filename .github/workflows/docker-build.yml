@@ -50,6 +50,8 @@ jobs:
           platforms: linux/amd64,linux/arm64 
           push: true
           tags: ghcr.io/${{ env.REPO }}-crawler:latest 
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
 
       # -----------------------------------------------------------
       # CONSTRUIR IMAGEN 2: FRONTEND
