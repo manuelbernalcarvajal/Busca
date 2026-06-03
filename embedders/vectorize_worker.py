@@ -43,10 +43,10 @@ def vectorizar_batch():
     try:
         print("🔍 Buscando documentos...")
         
-        # Le pedimos a Meilisearch SOLO los que tienen el vector vacío
+        # Filtramos por nuestro ticket, adiós a los problemas de _vectors
         docs = index.search('', {
             'limit': 20,
-            'filter': '_vectors.default IS NULL'  # <-- FILTRO NATIVO REPARADO
+            'filter': "estado_ia = 'pendiente'"  # <--- BÚSQUEDA INFALIBLE
         })
         
         documentos_pendientes = docs['hits']
@@ -81,10 +81,12 @@ def vectorizar_batch():
                     grupo_id = mejor_clon.get('grupo_id', mejor_clon['id'])
                     print(f"   🔗 ¡Grupo encontrado!")
 
+            # JUSTO AL AÑADIR A LA LISTA, ACTUALIZAMOS LA ETIQUETA:
             documentos_actualizados.append({
                 'id': doc['id'], 
                 '_vectors': {'default': vector},
-                'grupo_id': grupo_id
+                'grupo_id': grupo_id,
+                'estado_ia': 'completado'  # <--- TICKET CERRADO ✅
             })
             
         index.update_documents(documentos_actualizados)
