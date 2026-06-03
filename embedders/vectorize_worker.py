@@ -63,7 +63,7 @@ def vectorizar_batch():
             busqueda_clones = index.search('', {
                 'vector': vector,
                 'limit': 1,
-                'showRankingScore': True
+                'showRankingScore': True,
                 'hybrid': {'semanticRatio': 1.0}
             })
             
