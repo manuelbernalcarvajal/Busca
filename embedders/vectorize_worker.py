@@ -78,7 +78,7 @@ def vectorizar_batch():
 
             documentos_actualizados.append({
                 'id': doc['id'], 
-                '_vectors': vector,
+                '_vectors': {'default': vector},
                 'grupo_id': grupo_id
             })
             
