@@ -16,9 +16,11 @@ print("✅ Listo para vectorizar y agrupar.")
 def vectorizar_batch():
     try:
         # Buscamos documentos vírgenes (sin vector)
+        print("🔍 Buscando documentos pendientes...")
         docs = index.search('', {'filter': '_vectors IS NULL', 'limit': 10})
         
         if not docs.get('hits'):
+            print("💤 No hay documentos nuevos, durmiendo...")
             return False
 
         documentos_actualizados = []
@@ -40,6 +42,7 @@ def vectorizar_batch():
             if busqueda_clones.get('hits'):
                 mejor_clon = busqueda_clones['hits'][0]
                 similitud = mejor_clon.get('_rankingScore', 0)
+                print("Clones encontrados")
                 
                 # 0.90 es una similitud brutal (Ej: Ley Base vs Ley de Reforma)
                 if similitud > 0.90:
@@ -64,6 +67,7 @@ def vectorizar_batch():
 
 while True:
     if not vectorizar_batch():
+        print("No vectrorizar_bath() sleep 60
         time.sleep(60)
     else:
         time.sleep(2)
