@@ -14,17 +14,25 @@ index = client.index(INDICE)
 
 def asegurar_configuracion():
     print("🛠️ Verificando configuración de Meilisearch...")
-    # 1. Asegurar filterableAttributes
+    
+    # 1. Asegurar filterableAttributes (Incluimos _vectors)
     settings = index.get_settings()
     filterable = settings.get('filterableAttributes', [])
     if '_vectors' not in filterable:
         print("🔧 Configurando _vectors como filtrable...")
         index.update_filterable_attributes(filterable + ['_vectors'])
     
-    # 2. Asegurar Embedders
-    if not settings.get('embedders'):
-        print("🔧 Configurando Embedders...")
-        index.update_settings({"embedders": {"default": {"source": "userProvided", "dimensions": 384}}})
+    # 2. Asegurar Embedders (La configuración que hacías con curl)
+    # Esto es exactamente lo mismo que tu comando PATCH
+    index.update_settings({
+        "embedders": {
+            "default": {
+                "source": "userProvided", 
+                "dimensions": 384
+            }
+        }
+    })
+    print("✅ Configuración de vectores aplicada desde Python.")
 
 asegurar_configuracion()
 print("✅ Listo para vectorizar y agrupar.")
