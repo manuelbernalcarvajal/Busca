@@ -65,7 +65,7 @@ def vectorizar_batch():
                 'limit': 1,
                 'showRankingScore': True,
                 'hybrid': {
-                    'semanticRatio': 1.0
+                    'semanticRatio': 1.0,
                     'embedder': 'default'
                 }
             })
