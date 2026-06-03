@@ -44,6 +44,13 @@ def asegurar_configuracion():
 asegurar_configuracion()
 print("✅ Listo para vectorizar y agrupar.")
 
+def trocear_texto(texto, max_palabras=150):
+    """Corta textos largos en fragmentos más digeribles para la IA"""
+    if not texto:
+        return [""]
+    palabras = texto.split()
+    return [' '.join(palabras[i:i + max_palabras]) for i in range(0, len(palabras), max_palabras)]
+
 def vectorizar_batch():
     try:
         print("🔍 Buscando documentos...")
@@ -65,13 +72,18 @@ def vectorizar_batch():
         documentos_actualizados = []
         for doc in documentos_pendientes:
             print(f"🔄 Procesando: {doc.get('titulo', '')[:50]}...")
-            vector = model.encode(doc['contenido']).tolist()
+            
+            # 1. Troceamos el contenido en partes de 150 palabras
+            fragmentos = trocear_texto(doc['contenido'])
+            
+            # 2. Vectorizamos TODOS los fragmentos de golpe (devuelve una lista de vectores)
+            vectores = model.encode(fragmentos).tolist()
             
             grupo_id = doc['id'] 
             
-            # Busqueda de clones
+            # Busqueda de clones (usamos solo el primer vector para no sobrecargar esta comprobación rápida)
             busqueda_clones = index.search('', {
-                'vector': vector,
+                'vector': vectores[0], 
                 'limit': 1,
                 'showRankingScore': True,
                 'hybrid': {
@@ -86,12 +98,12 @@ def vectorizar_batch():
                     grupo_id = mejor_clon.get('grupo_id', mejor_clon['id'])
                     print(f"   🔗 ¡Grupo encontrado!")
 
-            # JUSTO AL AÑADIR A LA LISTA, ACTUALIZAMOS LA ETIQUETA:
+            # 3. Guardamos la LISTA ENTERA de vectores en Meilisearch
             documentos_actualizados.append({
                 'id': doc['id'], 
-                '_vectors': {'default': vector},
+                '_vectors': {'default': vectores}, # <--- AQUÍ ESTÁ LA MAGIA (Múltiples vectores)
                 'grupo_id': grupo_id,
-                'estado_ia': 'completado'  # <--- TICKET CERRADO ✅
+                'estado_ia': 'completado'
             })
             
         index.update_documents(documentos_actualizados)
