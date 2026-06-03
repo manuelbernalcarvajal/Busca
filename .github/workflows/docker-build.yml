@@ -1,8 +1,6 @@
 name: Construir y Subir Imágenes CRAWLER
 
 on:
-  release:
-    types: [published]
   workflow_dispatch: 
 
 jobs:
