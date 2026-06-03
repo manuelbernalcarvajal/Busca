@@ -6,6 +6,7 @@ import os
 import re
 import io
 from pypdf import PdfReader # ¡Nuestro lector de PDFs en RAM!
+from urllib.parse import urlparse, urlunparse
 
 # 1. Le decimos a Scrapy que deje de ignorar los PDFs por defecto
 EXTENSIONES_PERMITIDAS = [ext for ext in IGNORED_EXTENSIONS if ext != 'pdf']
@@ -23,6 +24,23 @@ def cargar_dominios_permitidos():
             return [linea.strip() for linea in f if linea.strip()]
     except FileNotFoundError:
         return ['boe.es', 'poderjudicial.es']
+
+def amputar_parametros_basura(url):
+    """
+    Destruye parámetros inútiles de las URLs antes de que Scrapy las visite.
+    """
+    parsed = urlparse(url)
+    
+    # Si la URL es del Poder Judicial o del BOE y tiene el parámetro '?idProvincia='
+    if 'idProvincia=' in parsed.query:
+        # Reconstruimos la URL EXACTA pero dejando la 'query' (los parámetros) en blanco
+        url_limpia = urlunparse((parsed.scheme, parsed.netloc, parsed.path, parsed.params, '', parsed.fragment))
+        return url_limpia
+        
+    # Aquí puedes añadir más basura conocida en el futuro
+    # if 'source=twitter' in parsed.query: ...
+    
+    return url
 
 class GobSpider(CrawlSpider):
     name = 'gob_spider'
@@ -45,7 +63,8 @@ class GobSpider(CrawlSpider):
             LinkExtractor(
                 allow=(r'/tramites/', r'/leyes/', r'/sede/', r'/disposiciones/', r'\.pdf$'), 
                 deny=idiomas_cooficiales + basura_web,
-                deny_extensions=EXTENSIONES_PERMITIDAS
+                deny_extensions=EXTENSIONES_PERMITIDAS,
+                process_value=amputar_parametros_basura  # <--- EL FRANCOTIRADOR 🔫
             ), 
             callback='parse_documento',
             follow=True,
@@ -55,7 +74,8 @@ class GobSpider(CrawlSpider):
         Rule(
             LinkExtractor(
                 deny=idiomas_cooficiales + basura_web,
-                deny_extensions=EXTENSIONES_PERMITIDAS
+                deny_extensions=EXTENSIONES_PERMITIDAS,
+                process_value=amputar_parametros_basura  # <--- EL FRANCOTIRADOR 🔫
             ),
             callback='parse_documento',
             follow=True,
@@ -66,6 +86,7 @@ class GobSpider(CrawlSpider):
             LinkExtractor(
                 allow=idiomas_cooficiales,
                 deny_extensions=EXTENSIONES_PERMITIDAS
+                process_value=amputar_parametros_basura  # <--- EL FRANCOTIRADOR 🔫
             ),
             callback='parse_documento',
             follow=True,
