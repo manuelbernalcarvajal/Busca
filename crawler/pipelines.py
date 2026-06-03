@@ -64,6 +64,9 @@ class ProcesadorGobiernoPipeline:
         doc_id = re.sub(r'[^a-zA-Z0-9]', '', item['url'])
         item['id'] = doc_id
         
+        # 👇 LA MAGIA PARA CALLAR A MEILISEARCH 👇
+        item['_vectors'] = {"default": None}  # En Python usamos None, que se traduce a null en JSON
+        
         url_api = f"{self.meilisearch_url}/indexes/{self.indice}/documents"
         
         try:
