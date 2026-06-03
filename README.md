@@ -5,7 +5,7 @@ YALm recomendado:
 services:
   # 1. EL CEREBRO
   meilisearch:
-    image: getmeili/meilisearch:latest
+    image: getmeili/meilisearch:v1.45.2   
     container_name: buscador-gobierno
     environment:
       - MEILI_MASTER_KEY=${MEILI_MASTER_KEY} 
@@ -62,46 +62,24 @@ services:
     image: ghcr.io/manuelbernalcarvajal/busca-vectorizer:latest
     container_name: arana-ia
     environment:
+      - PYTHONUNBUFFERED=1  # <--- AÑADE ESTO
       - MEILISEARCH_URL=http://meilisearch:7700
       - MEILISEARCH_KEY=${MEILI_MASTER_KEY}
     depends_on:
       - meilisearch
     restart: unless-stopped
-    # 1. TRUCO LINUX: Ejecutamos el script con la prioridad más baja posible (nice -n 19)
-    command: >
-      nice -n 19 python vectorize_worker.py
-    # 2. LÍMITES DOCKER: Le ponemos una correa corta
+    # LÍMITES DOCKER: Le ponemos una correa corta
     deploy:
       resources:
         limits:
-          cpus: '0.5'        # Nunca podrá usar más de medio núcleo de CPU
-          memory: 1024M      # Nunca usará más de 1GB de RAM (si se pasa, espera, no bloquea)
+          cpus: '1'        # Nunca podrá usar más de medio núcleo de CPU
+          memory: 2024M      # Nunca usará más de 1GB de RAM (si se pasa, espera, no bloquea)
     logging:
       driver: "json-file"
       options:
         max-size: "30m"
         max-file: "3"
 
-  # 5. EL CONFIGURADOR (Activa los vectores en Meilisearch 1 sola vez)
-  init-meilisearch:
-    image: alpine:latest
-    container_name: meili-configurador
-    depends_on:
-      - meilisearch
-    environment:
-      # Pasamos la variable de forma segura al entorno del contenedor
-      - CLAVE=${MEILI_MASTER_KEY}
-    command: >
-      /bin/sh -c "
-        sleep 10 &&
-        apk add --no-cache curl &&
-        curl -X PATCH 'http://meilisearch:7700/indexes/documentos_legales/settings' \
-        -H 'Content-Type: application/json' \
-        -H \"Authorization: Bearer $$CLAVE\" \
-        -d '{\"embedders\": {\"default\": {\"source\": \"userProvided\", \"dimensions\": 384}}}'
-      "
-
-# Aquí declaramos los volúmenes gestionados por Docker
 volumes:
   meili_data:
   crawler_data:
