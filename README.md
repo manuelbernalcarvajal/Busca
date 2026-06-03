@@ -51,6 +51,8 @@ services:
     depends_on:
       - meilisearch
     restart: unless-stopped
+    volumes:
+      - huggingface_cache:/root/.cache/huggingface
     logging:
       driver: "json-file"
       options:
@@ -68,6 +70,8 @@ services:
     depends_on:
       - meilisearch
     restart: unless-stopped
+    volumes:
+      - huggingface_cache:/root/.cache/huggingface
     # LÍMITES DOCKER: Le ponemos una correa corta
     deploy:
       resources:
@@ -83,6 +87,7 @@ services:
 volumes:
   meili_data:
   crawler_data:
+  huggingface_cache:
 ```
 Los .env son:
 ```
