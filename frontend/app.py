@@ -30,7 +30,7 @@ def buscar():
         # Le inyectamos los parámetros de vector a la petición para Meilisearch
         datos_usuario['vector'] = query_vector
         datos_usuario['hybrid'] = {
-            'semanticRatio': 0.7, # 70% semántica, 30% palabras clave
+            'semanticRatio': 0.5, # 70% semántica, 30% palabras clave
             'embedder': 'default'
         }
 
