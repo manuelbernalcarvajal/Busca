@@ -12,7 +12,8 @@ ROBOTSTXT_OBEY = True
 DOWNLOAD_DELAY = 5.0 
 
 # Si quieres que consuma aún menos CPU, limítale los procesos en paralelo
-CONCURRENT_REQUESTS = 10
+CONCURRENT_REQUESTS = 30
+CONCURRENT_REQUESTS_PER_DOMAIN = 2
 
 # 4. Modo Auto-Piloto Ético (AutoThrottle)
 # Si Scrapy detecta que el servidor del BOE va lento, él solo frena y espera más tiempo.
