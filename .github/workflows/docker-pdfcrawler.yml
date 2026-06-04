@@ -1,0 +1,54 @@
+name: Construir y Subir Imágenes pdf_crawler
+
+on:
+  workflow_dispatch: 
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+    
+    permissions:
+      contents: read
+      packages: write 
+
+    steps:
+      - name: 📥 Descargar el código
+        uses: actions/checkout@v3
+
+      # -----------------------------------------------------------
+      # MAGIA MULTI-ARQUITECTURA (ARM e INTEL)
+      # -----------------------------------------------------------
+      - name: ⚙️ Configurar QEMU
+        uses: docker/setup-qemu-action@v2
+
+      - name: 🛠️ Configurar Docker Buildx
+        uses: docker/setup-buildx-action@v2
+
+      # -----------------------------------------------------------
+      # LOGIN Y PREPARACIÓN
+      # -----------------------------------------------------------
+      - name: 🔑 Iniciar sesión en el Registro de GitHub
+        uses: docker/login-action@v2
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }} 
+
+      - name: 🔠 Convertir el nombre del repositorio a minúsculas
+        run: echo "REPO=${GITHUB_REPOSITORY,,}" >>${GITHUB_ENV}
+
+      # -----------------------------------------------------------
+      # CONSTRUIR IMAGEN 1: CRAWLER
+      # -----------------------------------------------------------
+      - name: 🕷️ Construir y Subir pdf_crawler
+        uses: docker/build-push-action@v4
+        with:
+          context: ./pdf_crawler
+          # Aquí le decimos que compile para ambas arquitecturas simultáneamente
+          platforms: linux/amd64,linux/arm64 
+          push: true
+          tags: ghcr.io/${{ env.REPO }}-pdf_crawler:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  
