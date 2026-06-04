@@ -6,15 +6,6 @@ import re
 class PdfSpider(scrapy.Spider):
     name = 'pdf_spider'
     
-    # 🚨 CONFIGURACIÓN DE ÉTICA Y SEGURIDAD 🚨
-    custom_settings = {
-        'DOWNLOAD_DELAY': 10.0, # 10 segundos entre cada PDF (No queremos cabrear al Estado)
-        'CONCURRENT_REQUESTS': 1, # Solo un PDF a la vez (Ahorro brutal de RAM)
-        'DOWNLOAD_MAXSIZE': 104857600, # Límite de 100MB por PDF
-        'ITEM_PIPELINES': {'pdf_pipeline.PdfPipeline': 300},
-        'USER_AGENT': 'BuscadorLegalBot/2.0 (+minero_pdf@apdespanol.es.eu.org)'
-    }
-    
     def start_requests(self):
         # 1. Miramos el buzón (cola_pdfs.db)
         try:
