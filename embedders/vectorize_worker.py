@@ -15,20 +15,17 @@ index = client.index(INDICE)
 def asegurar_configuracion():
     print("🛠️ Verificando configuración de Meilisearch...")
     
-    # 1. Asegurar filterableAttributes (AÑADIMOS AMBOS: _vectors y estado_ia)
     settings = index.get_settings()
     filterable = settings.get('filterableAttributes', [])
     
-    # Usamos set() para unir la configuración actual con los que necesitamos sin duplicar
-    nuevos_filtros = list(set(filterable + ['_vectors', 'estado_ia']))
+    # Nos aseguramos de tener estado_ia, origen_id (del pipeline) y cluster_id (temático)
+    nuevos_filtros = list(set(filterable + ['_vectors', 'estado_ia', 'origen_id', 'cluster_id']))
     
-    # Solo actualizamos si Meilisearch no los tiene ya
     if sorted(filterable) != sorted(nuevos_filtros):
-        print("🔧 Configurando filtros (_vectors y estado_ia) y esperando...")
+        print("🔧 Configurando filtros avanzados y esperando...")
         tarea_filtros = index.update_filterable_attributes(nuevos_filtros)
-        client.wait_for_task(tarea_filtros.task_uid) # <-- MAGIA ASÍNCRONA
+        client.wait_for_task(tarea_filtros.task_uid)
     
-    # 2. Asegurar Embedders
     print("🔧 Aplicando configuración de embedders y esperando...")
     tarea_embedders = index.update_settings({
         "embedders": {
@@ -38,76 +35,71 @@ def asegurar_configuracion():
             }
         }
     })
-    client.wait_for_task(tarea_embedders.task_uid) # <-- MAGIA ASÍNCRONA
-    print("✅ Configuración de vectores aplicada y confirmada desde Python.")
+    client.wait_for_task(tarea_embedders.task_uid)
+    print("✅ Configuración de vectores aplicada.")
 
 asegurar_configuracion()
-print("✅ Listo para vectorizar y agrupar.")
+print("✅ Listo para vectorizar.")
 
-def trocear_texto(texto, max_palabras=150):
-    """Corta textos largos en fragmentos más digeribles para la IA"""
-    if not texto:
-        return [""]
-    palabras = texto.split()
-    return [' '.join(palabras[i:i + max_palabras]) for i in range(0, len(palabras), max_palabras)]
+# ❌ BORRAMOS LA FUNCIÓN trocear_texto() ❌
+# El Pipeline ya nos manda los textos perfectamente troceados por párrafos.
 
 def vectorizar_batch():
     try:
-        print("🔍 Buscando documentos...")
+        print("🔍 Buscando chunks pendientes...")
         
-        # Filtramos por nuestro ticket, adiós a los problemas de _vectors
         docs = index.search('', {
-            'limit': 20,
-            'filter': "estado_ia = 'pendiente'"  # <--- BÚSQUEDA INFALIBLE
+            'limit': 50, # Como ahora son chunks sueltos, podemos procesar más de golpe
+            'filter': "estado_ia = 'pendiente'"
         })
         
         documentos_pendientes = docs['hits']
         
         if not documentos_pendientes:
-            print("💤 No hay documentos pendientes, durmiendo...")
+            print("💤 No hay chunks pendientes, durmiendo...")
             return False
 
-        print(f"🔄 Encontrados {len(documentos_pendientes)} documentos para procesar.")
+        print(f"🔄 Encontrados {len(documentos_pendientes)} chunks para procesar.")
         
         documentos_actualizados = []
         for doc in documentos_pendientes:
-            print(f"🔄 Procesando: {doc.get('titulo', '')[:50]}...")
+            print(f"🔄 Vectorizando: {doc.get('titulo', '')[:30]} (Chunk)")
             
-            # 1. Troceamos el contenido en partes de 150 palabras
-            fragmentos = trocear_texto(doc['contenido'])
+            # 1. Vectorizamos directamente el contenido entero (porque ya es un trozo pequeño)
+            # Retorna una lista plana de floats: [0.12, -0.45, ...]
+            vector_unico = model.encode(doc['contenido']).tolist()
             
-            # 2. Vectorizamos TODOS los fragmentos de golpe (devuelve una lista de vectores)
-            vectores = model.encode(fragmentos).tolist()
+            # 2. El Cerebro Temático (cluster_id)
+            # Buscamos si ya existe algún fragmento en la BD que hable de lo mismo (>90% de similitud)
+            cluster_id = doc['id'] 
             
-            grupo_id = doc['id'] 
-            
-            # Busqueda de clones (usamos solo el primer vector para no sobrecargar esta comprobación rápida)
             busqueda_clones = index.search('', {
-                'vector': vectores[0], 
+                'vector': vector_unico, 
                 'limit': 1,
                 'showRankingScore': True,
                 'hybrid': {
-                    'semanticRatio': 0.7,
+                    'semanticRatio': 0.8, # Subimos al 80% semántica para clustering temático
                     'embedder': 'default'
                 }
             })
             
             if busqueda_clones.get('hits'):
                 mejor_clon = busqueda_clones['hits'][0]
+                # Si se parecen muchísimo, los unimos bajo el mismo cluster_id temático
                 if mejor_clon.get('_rankingScore', 0) > 0.90:
-                    grupo_id = mejor_clon.get('grupo_id', mejor_clon['id'])
-                    print(f"   🔗 ¡Grupo encontrado!")
+                    cluster_id = mejor_clon.get('cluster_id', mejor_clon['id'])
+                    print(f"   🔗 ¡Coincidencia temática encontrada!")
 
-            # 3. Guardamos la LISTA ENTERA de vectores en Meilisearch
+            # 3. Guardamos el vector único y el cluster_id
             documentos_actualizados.append({
                 'id': doc['id'], 
-                '_vectors': {'default': vectores}, # <--- AQUÍ ESTÁ LA MAGIA (Múltiples vectores)
-                'grupo_id': grupo_id,
+                '_vectors': {'default': vector_unico}, # <--- Un solo vector por documento
+                'cluster_id': cluster_id,              # <--- Agrupación por temática
                 'estado_ia': 'completado'
             })
             
         index.update_documents(documentos_actualizados)
-        print("✅ Batch actualizado con éxito.")
+        print("✅ Batch de chunks actualizado con éxito.")
         return True
 
     except Exception as e:
@@ -117,6 +109,6 @@ def vectorizar_batch():
 
 while True:
     if not vectorizar_batch():
-        time.sleep(60)
+        time.sleep(20) # Reducimos la espera si no hay trabajo, porque procesa más rápido
     else:
         time.sleep(2)

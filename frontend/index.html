@@ -42,10 +42,19 @@
         .texto-destacado { font-size: 1.05em; line-height: 1.6; color: #4d5156; display: block; margin-bottom: 12px; }
         em { background-color: #fce8e6; color: #d93025; font-style: normal; font-weight: bold; border-radius: 3px; padding: 0 2px; }
         
-        .desplegable { margin-top: 15px; background: #f8f9fa; border-radius: 8px; padding: 10px; }
-        .desplegable summary { color: #006621; cursor: pointer; font-weight: 500; user-select: none; }
-        .desplegable ul { list-style: none; padding: 10px 0 0 10px; margin: 0; }
-        .desplegable a { color: #1a0dab; text-decoration: none; font-size: 0.95em; font-weight: 600; }
+        /* Estilos para el RAG Anidado (Amarillo y Morado) */
+        .desplegable-interno { margin-top: 10px; background: #fffbe6; border-left: 3px solid #fbbc04; padding: 8px; border-radius: 4px; }
+        .desplegable-interno summary { color: #b07d00; font-size: 0.9em; font-weight: 600; cursor: pointer; }
+        .desplegable-interno ul { list-style: none; padding-left: 10px; margin-top: 8px; }
+        .desplegable-interno li { margin-bottom: 8px; padding-bottom: 8px; border-bottom: 1px dashed #fce8b2; font-size: 0.95em; color: #4d5156; }
+        .desplegable-interno li:last-child { border-bottom: none; margin-bottom: 0; padding-bottom: 0; }
+
+        .desplegable-externo { margin-top: 20px; background: #f3e8fd; border-left: 3px solid #a142f4; padding: 12px; border-radius: 4px; }
+        .desplegable-externo summary { color: #681da8; font-size: 0.95em; font-weight: 600; cursor: pointer; }
+        .desplegable-externo ul { list-style: none; padding-left: 10px; margin-top: 10px; }
+        .desplegable-externo li { margin-bottom: 15px; padding-bottom: 15px; border-bottom: 1px solid #d2b3f9; }
+        .desplegable-externo li:last-child { border-bottom: none; margin-bottom: 0; padding-bottom: 0; }
+        .fragmento-texto { font-size: 0.9em; color: #5f6368; line-height: 1.4; margin-top: 4px; }
         .titulo-enlace { color: #5f6368; font-size: 0.85em; margin-left: 5px; }
 
         /* Botón Cargar Más */
@@ -57,18 +66,17 @@
         .cookie-btn { background: var(--primary); color: white; border: none; padding: 8px 20px; border-radius: 4px; cursor: pointer; font-weight: bold; }
         .cookie-btn:hover { background: #1765cc; }
         
-        /* Responsive y Estilos de Impresión (Magia para los yayos) */
+        /* Responsive y Estilos de Impresión */
         @media (max-width: 600px) {
             .contador-paginas { position: static; display: inline-block; margin-top: 10px; }
         }
         
         @media print {
-            /* Ocultamos todo lo que no son resultados */
-            .header, .search-container, .historial-tags, .btn-cargar-mas, .cookie-banner, .desplegable summary { display: none !important; }
+            .header, .search-container, .historial-tags, .btn-cargar-mas, .cookie-banner, details summary { display: none !important; }
             body { background: white; color: black; }
             .container { margin: 0; padding: 0; max-width: 100%; }
             .resultado { border: 1px solid #ccc; box-shadow: none; page-break-inside: avoid; margin-bottom: 20px; }
-            .desplegable ul { display: block; padding-left: 0; }
+            details ul { display: block; padding-left: 0; }
             a { text-decoration: none; color: black; }
         }
     </style>
@@ -131,7 +139,7 @@
                 const res = await fetch('/api/stats');
                 const data = await res.json();
                 if (data.numberOfDocuments) {
-                    document.getElementById('contadorInfo').innerText = `📄 ${data.numberOfDocuments.toLocaleString('es-ES')} documentos oficiales`;
+                    document.getElementById('contadorInfo').innerText = `📄 ${data.numberOfDocuments.toLocaleString('es-ES')} fragmentos oficiales`;
                 } else {
                     document.getElementById('contadorInfo').style.display = 'none';
                 }
@@ -176,7 +184,7 @@
         let queryActual = "";
         let offsetActual = 0;
         const LIMITE_POR_PAGINA = 50;
-        let hitsAcumulados = []; // Guardamos los resultados para agruparlos todos juntos
+        let hitsAcumulados = []; 
 
         function manejarBusqueda(evento) {
             clearTimeout(timerBusqueda);
@@ -196,7 +204,6 @@
             const query = document.getElementById('searchInput').value.trim();
             if (!query) return;
             
-            // Reiniciamos los contadores para una búsqueda nueva
             queryActual = query;
             offsetActual = 0;
             hitsAcumulados = [];
@@ -243,29 +250,27 @@
                 });
                 const datos = await respuesta.json();
                 
-                // Añadimos los nuevos a la colección general
                 if (datos.hits && datos.hits.length > 0) {
                     hitsAcumulados = hitsAcumulados.concat(datos.hits);
                     panel.innerHTML = generarHTMLResultados(hitsAcumulados);
                     
-                    // Si nos devolvieron exactamente el límite, es muy probable que haya más páginas
                     if (datos.hits.length === LIMITE_POR_PAGINA) {
                         btnCargarMas.style.display = 'block';
                         btnCargarMas.innerText = '⬇️ Cargar más resultados';
                     } else {
-                        btnCargarMas.style.display = 'none'; // Se acabó la lista
+                        btnCargarMas.style.display = 'none'; 
                     }
                 } else if (offsetActual === 0) {
                     panel.innerHTML = `<p style="text-align:center; color:#d93025;">No hay resultados disponibles para esta búsqueda.</p>`;
                     btnCargarMas.style.display = 'none';
                 } else {
-                    btnCargarMas.style.display = 'none'; // Intentamos cargar más pero ya no había
+                    btnCargarMas.style.display = 'none'; 
                 }
 
             } catch (error) {
                 console.error(error);
                 if (offsetActual === 0) panel.innerHTML = '<p style="text-align:center; color:red;">Error de conexión.</p>';
-                btnCargarMas.innerText = '⬇️ Cargar más resultados'; // Restaurar botón
+                btnCargarMas.innerText = '⬇️ Cargar más resultados'; 
             }
         }
 
@@ -280,62 +285,106 @@
                 
                 if(datos.hits && datos.hits.length > 0) {
                     hitsAcumulados = datos.hits;
-                    document.getElementById('panelPrincipal').innerHTML = `<h3 style="color:#5f6368; text-align:center;">🔥 Últimas Leyes Procesadas</h3>` + generarHTMLResultados(hitsAcumulados);
+                    document.getElementById('panelPrincipal').innerHTML = `<h3 style="color:#5f6368; text-align:center;">🔥 Últimos fragmentos procesados</h3>` + generarHTMLResultados(hitsAcumulados);
                     document.getElementById('btnCargarMas').style.display = 'none';
                 }
             } catch (e) {}
         }
 
-        // --- GENERADOR DE HTML CON AGRUPACIÓN DESDE BACKEND ---
+        // --- GENERADOR DE HTML CON RAG ANIDADO ---
         function generarHTMLResultados(hits) {
-            const agrupados = {};
+            const clusters = {};
 
+            // 1. Agrupación Doble (Por Temática y luego por Documento/Origen)
             hits.forEach(hit => {
-                // Usamos el grupo_id que calculó la IA en el servidor. Si no existe aún, usamos el propio id del documento.
-                const idGrupo = hit.grupo_id || hit.id;
+                // Si no tiene cluster_id (porque el worker aún no pasó), usamos su propio ID
+                const idCluster = hit.cluster_id || hit.origen_id || hit.id;
+                const idOrigen = hit.origen_id || hit.id;
 
-                if (!agrupados[idGrupo]) {
-                    agrupados[idGrupo] = {
-                        categoria: hit.categoria,
-                        tituloPrincipal: hit.titulo, 
-                        // El resumen principal visual de la tarjeta
-                        texto: hit._formatted ? hit._formatted.contenido : hit.contenido.substring(0, 250) + '...',
-                        enlaces: []
+                if (!clusters[idCluster]) {
+                    clusters[idCluster] = {
+                        principal: hit, // El mejor resultado absoluto del tema
+                        fuentes: {}     // Diccionario de orígenes dentro de este tema
                     };
                 }
 
-                // Guardamos el texto destacado ESPECÍFICO de cada enlace para el desplegable
-                const textoEspecifico = hit._formatted ? hit._formatted.contenido : hit.contenido.substring(0, 150) + '...';
-
-                agrupados[idGrupo].enlaces.push({ 
-                    url: hit.url, 
-                    dominio: hit.dominio,
-                    tituloEspecifico: hit.titulo,
-                    fragmento: textoEspecifico 
-                });
+                if (!clusters[idCluster].fuentes[idOrigen]) {
+                    clusters[idCluster].fuentes[idOrigen] = [];
+                }
+                
+                // Guardamos el fragmento dentro de su origen correspondiente
+                clusters[idCluster].fuentes[idOrigen].push(hit);
             });
 
-            return '<div class="grid-resultados">' + Object.entries(agrupados).map(([id, info]) => `
+            // 2. Renderizado del HTML
+            return '<div class="grid-resultados">' + Object.values(clusters).map(cluster => {
+                const principal = cluster.principal;
+                const idOrigenPrincipal = principal.origen_id || principal.id;
+                
+                // Fragmentos adicionales del MISMO documento principal
+                const fragmentosMismaFuente = cluster.fuentes[idOrigenPrincipal].slice(1); 
+                
+                // OTROS documentos distintos que hablan de lo mismo
+                const otrasFuentesIds = Object.keys(cluster.fuentes).filter(id => id !== idOrigenPrincipal);
+                
+                const textoPrincipal = principal._formatted ? principal._formatted.contenido : principal.contenido.substring(0, 250) + '...';
+
+                let html = `
                 <div class="resultado">
-                    <span class="etiqueta">${info.categoria}</span>
-                    <div class="titulo">${info.tituloPrincipal}</div>
-                    <div class="texto-destacado">${info.texto}</div>
-                    <details class="desplegable">
-                        <summary>Fuentes oficiales unificadas (${info.enlaces.length})</summary>
-                        <ul style="padding-left: 5px;">${info.enlaces.map(e => `
-                            <li style="margin-bottom: 12px; padding-bottom: 10px; border-bottom: 1px dashed #dadce0;">
-                                <div>
-                                    🔗 <a href="${e.url}" target="_blank">${e.dominio}</a> 
-                                    <span class="titulo-enlace">- ${e.tituloEspecifico}</span>
-                                </div>
-                                <div style="font-size: 0.9em; color: #5f6368; margin-top: 6px; margin-left: 22px; line-height: 1.4;">
-                                    ${e.fragmento}
-                                </div>
+                    <span class="etiqueta">${principal.categoria}</span>
+                    <div class="titulo">🔗 <a href="${principal.url}" target="_blank" style="color: inherit; text-decoration: none;">${principal.titulo}</a></div>
+                    <div class="texto-destacado">${textoPrincipal}</div>
+                `;
+
+                // LA LÍNEA AMARILLA (Otros fragmentos del mismo origen)
+                if (fragmentosMismaFuente.length > 0) {
+                    html += `
+                    <details class="desplegable-interno">
+                        <summary>📄 Otros fragmentos de la misma fuente de interés (${fragmentosMismaFuente.length})</summary>
+                        <ul>${fragmentosMismaFuente.map(f => `
+                            <li>
+                                <div class="fragmento-texto">${f._formatted ? f._formatted.contenido : f.contenido.substring(0, 150) + '...'}</div>
                             </li>
                         `).join('')}</ul>
                     </details>
-                </div>
-            `).join('') + '</div>';
+                    `;
+                }
+
+                // LA LÍNEA MORADA (Otras fuentes oficiales relacionadas por temática)
+                if (otrasFuentesIds.length > 0) {
+                    html += `
+                    <details class="desplegable-externo">
+                        <summary>📚 Fuentes oficiales unificadas - Tema similar (${otrasFuentesIds.length})</summary>
+                        <ul>${otrasFuentesIds.map(id => {
+                            const primeraDeOtraFuente = cluster.fuentes[id][0];
+                            const otrosFragmentosDeEsaFuente = cluster.fuentes[id].slice(1);
+                            
+                            let subHtml = `
+                            <li>
+                                <div>🔗 <a href="${primeraDeOtraFuente.url}" target="_blank" style="color: #1a0dab; font-weight: 600; text-decoration: none;">${primeraDeOtraFuente.dominio}</a> <span class="titulo-enlace">- ${primeraDeOtraFuente.titulo}</span></div>
+                                <div class="fragmento-texto">${primeraDeOtraFuente._formatted ? primeraDeOtraFuente._formatted.contenido : primeraDeOtraFuente.contenido.substring(0, 150) + '...'}</div>
+                            `;
+                            
+                            // Si ESA otra fuente también tiene múltiples fragmentos, se anidan
+                            if(otrosFragmentosDeEsaFuente.length > 0) {
+                                subHtml += `
+                                <details class="desplegable-interno" style="margin-top: 8px;">
+                                    <summary>Más fragmentos de esta fuente (${otrosFragmentosDeEsaFuente.length})</summary>
+                                    <ul>${otrosFragmentosDeEsaFuente.map(f => `
+                                        <li><div class="fragmento-texto">${f._formatted ? f._formatted.contenido : f.contenido.substring(0, 150) + '...'}</div></li>
+                                    `).join('')}</ul>
+                                </details>`;
+                            }
+                            subHtml += `</li>`;
+                            return subHtml;
+                        }).join('')}</ul>
+                    </details>
+                    `;
+                }
+
+                html += `</div>`; // Cierra la tarjeta resultado
+                return html;
+            }).join('') + '</div>';
         }
     </script>
 </body>
