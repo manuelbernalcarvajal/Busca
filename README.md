@@ -88,7 +88,7 @@ services:
         max-size: "30m"
         max-file: "3"
   pdf_crawler:
-    image: ghcr.io/manuelbernalcarvajal/busca-pdf-crawler:latest # Imagen propia
+    image: ghcr.io/manuelbernalcarvajal/busca-pdf_crawler:latest # Imagen propia
     container_name: arana-pdfs
     environment:
       - MEILISEARCH_URL=http://meilisearch:7700
