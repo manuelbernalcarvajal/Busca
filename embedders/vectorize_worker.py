@@ -15,6 +15,18 @@ index = client.index(INDICE)
 def asegurar_configuracion():
     print("🛠️ Verificando configuración de Meilisearch...")
     
+    # --- NUEVO: Comprobar y crear el índice si no existe ---
+    try:
+        client.get_index(INDICE)
+    except meilisearch.errors.MeilisearchApiError as e:
+        if getattr(e, 'code', '') == 'index_not_found':
+            print(f"⚠️ Índice '{INDICE}' no existe. Creándolo desde cero...")
+            client.create_index(INDICE)
+            time.sleep(2) # Le damos 2 segundos a Meilisearch para que respire
+        else:
+            raise e
+    # --------------------------------------------------------
+
     settings = index.get_settings()
     filterable = settings.get('filterableAttributes', [])
     
@@ -38,11 +50,9 @@ def asegurar_configuracion():
     client.wait_for_task(tarea_embedders.task_uid)
     print("✅ Configuración de vectores aplicada.")
 
+# 👇 ¡NO OLVIDES DEJAR ESTO DEBAJO DE LA FUNCIÓN! 👇
 asegurar_configuracion()
 print("✅ Listo para vectorizar.")
-
-# ❌ BORRAMOS LA FUNCIÓN trocear_texto() ❌
-# El Pipeline ya nos manda los textos perfectamente troceados por párrafos.
 
 def vectorizar_batch():
     try:
