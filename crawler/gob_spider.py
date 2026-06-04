@@ -119,55 +119,59 @@ class GobSpider(CrawlSpider):
         return request
 
    # --- LECTOR HÍBRIDO (HTML y PDF) ---
+    # --- LECTOR HÍBRIDO (HTML y PDF) ---
     def parse_documento(self, response):
-        # 1. Comprobamos si es un PDF (por extensión o por cabecera del servidor)
+        import fitz  # Asegúrate de haber instalado 'pymupdf' en requirements.txt
+        
         es_pdf = response.url.lower().endswith('.pdf') or b'application/pdf' in response.headers.get('Content-Type', b'')
+        
+        # 1. Búsqueda de la Identidad Única (URL Canónica)
+        url_canonica = response.css('link[rel="canonical"]::attr(href)').get()
+        if not url_canonica:
+            url_canonica = response.url # Si no hay, nos quedamos con la que tenemos
+
+        html_crudo = ""
 
         if es_pdf:
             try:
-                # Leemos el PDF directamente desde la RAM
-                lector = PdfReader(io.BytesIO(response.body))
-                texto_unido = " ".join([page.extract_text() for page in lector.pages if page.extract_text()])
+                doc = fitz.open(stream=response.body, filetype="pdf")
+                paginas_texto = []
+                for pagina in doc:
+                    # sort=True es MAGIA PURA: Lee las columnas de arriba a abajo correctamente
+                    paginas_texto.append(pagina.get_text("text", sort=True))
+                
+                texto_unido = " ".join(paginas_texto)
                 titulo_limpio = response.url.split('/')[-1] 
             except Exception as e:
-                self.logger.error(f"❌ Error leyendo PDF en RAM ({response.url}): {e}")
+                self.logger.error(f"❌ Error leyendo PDF con PyMuPDF ({response.url}): {e}")
                 return
         else:
-            # 2. Si es una web normal (HTML)
-            # Quitamos los 'span::text' porque suelen arrastrar menús y basura
+            # Es HTML. Extraemos el texto limpio para contar caracteres, pero GUARDAMOS EL HTML para el Pipeline
             textos_brutos = response.css('p::text, div.texto::text, article::text, main::text').getall()
             texto_unido = ' '.join(textos_brutos)
             titulo_limpio = limpiar_texto(response.css('title::text').get(default='Sin título'))
+            html_crudo = response.text # <--- Guardamos la estructura para no romper párrafos luego
         
         texto_limpio = limpiar_texto(texto_unido)
         
-        # =========================================================
-        # 🧠 EL SENTIDO COMÚN (Filtros Anti-Basura)
-        # =========================================================
         titulo_minusculas = titulo_limpio.lower()
         texto_minusculas = texto_limpio.lower()
 
-        # A) Filtro Anti-Soft 404 (Páginas de error disfrazadas)
+        # Filtros Anti-Basura
         errores = ['404', 'no encontrada', 'no existe', 'error', 'page not found']
         if any(e in titulo_minusculas for e in errores):
-            self.logger.info(f"🗑️ Basura descartada (Error 404 oculto): {response.url}")
             return
 
-        # B) Filtro Anti-Monstruo de las Galletas
-        # Si menciona cookies y el texto total es corto, es que solo capturó el banner
         if "utilizamos cookies" in texto_minusculas and len(texto_limpio) < 800:
-            self.logger.info(f"🍪 Basura descartada (Solo capturó banner de Cookies): {response.url}")
             return
 
-        # C) Nivel de exigencia general
-        # Un documento legal de verdad tiene mucha letra. Subimos el límite a 500 caracteres.
         if len(texto_limpio) > 500:
             yield {
                 'url': response.url,
+                'url_canonica': url_canonica, # <--- Enviamos la identidad real
                 'titulo': titulo_limpio,
                 'dominio': response.url.split('/')[2],
-                'contenido': texto_limpio,
+                'contenido': texto_limpio, 
+                'html_crudo': html_crudo, # <--- Enviamos el esqueleto para trocear bien
                 'longitud_caracteres': len(texto_limpio) 
             }
-        else:
-            self.logger.info(f"🤏 Descartado por corto ({len(texto_limpio)} chars): {response.url}")
