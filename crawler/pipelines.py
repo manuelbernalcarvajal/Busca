@@ -4,6 +4,7 @@ import os
 import hashlib
 from datetime import datetime
 from bs4 import BeautifulSoup 
+import sqlite3 # <--- NUEVO
 
 class ProcesadorGobiernoPipeline:
     
@@ -12,21 +13,36 @@ class ProcesadorGobiernoPipeline:
         self.meilisearch_key = os.getenv('MEILISEARCH_KEY', 'SuperSecreta123')
         self.indice = 'documentos_legales'
         self.configurado = False
-
-    def configurar_indice(self, spider):
-        headers = {'Authorization': f'Bearer {self.meilisearch_key}'}
-        config = {
-            "filterableAttributes": ["categoria", "dominio", "origen_id", "estado_ia"],
-            "sortableAttributes": ["fecha_indexacion"]
-        }
-        requests.patch(
-            f"{self.meilisearch_url}/indexes/{self.indice}/settings", 
-            headers=headers, json=config
-        )
-        self.configurado = True
-        spider.logger.info("⚙️ Índice HTML configurado con soporte para RAG semántico.")
+        
+        # 👇 CREAMOS EL BUZÓN COMPARTIDO CON EL MINERO 👇
+        os.makedirs('datos', exist_ok=True)
+        self.conn_cola = sqlite3.connect('datos/cola_pdfs.db')
+        self.cursor_cola = self.conn_cola.cursor()
+        self.cursor_cola.execute('''
+            CREATE TABLE IF NOT EXISTS tareas_pdf (
+                url TEXT PRIMARY KEY,
+                dominio TEXT,
+                estado TEXT DEFAULT 'pendiente',
+                fecha_agregado TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        ''')
+        self.conn_cola.commit()
 
     def process_item(self, item, spider):
+        # 🚨 FILTRO PARA PDFs: Lo guardamos en SQLite y abortamos el envío a Meilisearch
+        if item.get('tipo_item') == 'pdf_pendiente':
+            try:
+                self.cursor_cola.execute(
+                    'INSERT OR IGNORE INTO tareas_pdf (url, dominio, estado) VALUES (?, ?, ?)',
+                    (item['url'], item['dominio'], 'pendiente')
+                )
+                self.conn_cola.commit()
+                spider.logger.info(f"📝 PDF anotado en la cola: {item['url']}")
+            except Exception as e:
+                spider.logger.error(f"❌ Error en SQLite: {e}")
+            return item # Terminamos aquí para los PDFs
+
+        # --- FLUJO NORMAL PARA HTML ---
         if not self.configurado:
             self.configurar_indice(spider)
 
@@ -35,6 +51,8 @@ class ProcesadorGobiernoPipeline:
 
         self.procesar_y_enviar_chunks(item, spider)
         return item
+
+    # ... (Resto de tus funciones: configurar_indice, clasificar, trocear_por_estructura_html, procesar_y_enviar_chunks se quedan EXACTAMENTE IGUAL) ...
 
     def clasificar(self, url, titulo, contenido):
         texto_total = f"{url} {titulo} {contenido}".lower()
