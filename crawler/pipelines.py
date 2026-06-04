@@ -131,7 +131,7 @@ class ProcesadorGobiernoPipeline:
                 'contenido': texto_chunk,
                 'orden_lectura': indice + 1, 
                 'fecha_indexacion': item['fecha_indexacion'],
-                '_vectors': {"default": None},
+                # ❌ ELIMINADA LA LÍNEA DE _vectors: {"default": None} ❌
                 'estado_ia': 'pendiente' 
             }
             documentos_a_enviar.append(doc_chunk)
@@ -142,7 +142,12 @@ class ProcesadorGobiernoPipeline:
                 lote_size = 100
                 for i in range(0, len(documentos_a_enviar), lote_size):
                     lote = documentos_a_enviar[i:i + lote_size]
-                    requests.post(url_api, headers=headers, json=lote, timeout=10)
+                    respuesta = requests.post(url_api, headers=headers, json=lote, timeout=10)
+                    
+                    # 👇 EL CHIVATO DE ERRORES RECUPERADO 👇
+                    if respuesta.status_code not in [200, 202]:
+                        spider.logger.error(f"❌ Meilisearch rechazó el chunk: {respuesta.text}")
+                        
                 spider.logger.info(f"✅ Enviados {len(documentos_a_enviar)} chunks HTML de: {item['titulo'][:30]}...")
             except Exception as e:
                 spider.logger.error(f"🔌 Error de conexión con Meilisearch: {e}")
