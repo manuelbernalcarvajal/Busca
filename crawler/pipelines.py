@@ -1,8 +1,9 @@
 import requests
 import re
 import os
-import hashlib # <--- Añadimos la librería nativa para crear la huella dactilar
+import hashlib
 from datetime import datetime
+from bs4 import BeautifulSoup # <--- NUESTRA NUEVA ARMA SECRETA
 
 class ProcesadorGobiernoPipeline:
     
@@ -13,35 +14,31 @@ class ProcesadorGobiernoPipeline:
         self.configurado = False
 
     def configurar_indice(self, spider):
-        # Le decimos a Meilisearch qué campos sirven para Filtrar y Ordenar
         headers = {'Authorization': f'Bearer {self.meilisearch_key}'}
         config = {
-            "filterableAttributes": ["categoria", "dominio"],
-            "sortableAttributes": ["fecha_web", "fecha_indexacion"]
+            "filterableAttributes": ["categoria", "dominio", "grupo_id", "estado_ia"],
+            "sortableAttributes": ["fecha_indexacion"]
         }
         requests.patch(
             f"{self.meilisearch_url}/indexes/{self.indice}/settings", 
             headers=headers, json=config
         )
         self.configurado = True
-        spider.logger.info("⚙️ Índice de Meilisearch configurado con filtros y fechas.")
+        spider.logger.info("⚙️ Índice configurado con soporte para RAG semántico.")
 
     def process_item(self, item, spider):
         if not self.configurado:
             self.configurar_indice(spider)
 
-        item['categoria'] = self.clasificar(item['url'], item['titulo'], item['contenido'])
-        
-        # Generamos la fecha exacta de "ahora mismo" en formato ISO (UTC)
+        # Usamos el contenido de texto para la clasificación
+        item['categoria'] = self.clasificar(item['url'], item['titulo'], item.get('contenido', ''))
         item['fecha_indexacion'] = datetime.utcnow().strftime('%Y-%m-%dT%H:%M:%SZ')
 
-        self.enviar_a_meilisearch(item, spider)
+        self.procesar_y_enviar_chunks(item, spider)
         return item
 
     def clasificar(self, url, titulo, contenido):
         texto_total = f"{url} {titulo} {contenido}".lower()
-        
-        # Reglas lógicas del motor
         if re.search(r'/tramites/|/sede/|cita previa|solicitud|formulario', texto_total):
             return "Tramite/Servicio"
         elif re.search(r'real decreto|ley orgánica|boletín|resolución|disposición', texto_total):
@@ -53,30 +50,106 @@ class ProcesadorGobiernoPipeline:
         else:
             return "Informativo/General"
 
-    def enviar_a_meilisearch(self, item, spider):
+    def trocear_por_estructura_html(self, html_bruto, max_chars=1200):
+        """
+        Corta el texto respetando la estructura lógica.
+        - Corta siempre que se encuentra un nuevo título (h1, h2, h3...).
+        - Jamás corta a mitad de un párrafo <p> o elemento de lista <li>.
+        - Agrupa párrafos hasta llegar al límite de caracteres.
+        """
+        if not html_bruto:
+            return []
+            
+        soup = BeautifulSoup(html_bruto, 'html.parser')
+        chunks = []
+        chunk_actual = []
+        longitud_actual = 0
+        
+        # Buscamos en orden de aparición los elementos con texto útil
+        etiquetas_validas = ['h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'p', 'li', 'td']
+        
+        for elemento in soup.find_all(etiquetas_validas):
+            texto = elemento.get_text(separator=" ", strip=True)
+            if not texto:
+                continue
+                
+            # REGLA 1: Si es un encabezado (h1-h6) y ya tenemos texto acumulado,
+            # cerramos el chunk anterior de inmediato. Así cada sección de la ley empieza limpia.
+            es_encabezado = elemento.name.startswith('h')
+            if es_encabezado and longitud_actual > 0:
+                chunks.append("\n".join(chunk_actual))
+                chunk_actual = []
+                longitud_actual = 0
+            
+            # Añadimos el texto completo del párrafo o encabezado
+            chunk_actual.append(texto)
+            longitud_actual += len(texto)
+            
+            # REGLA 2: Si el chunk ya es lo bastante grande, lo cerramos.
+            # Como añadimos el elemento entero antes de comprobar esto, NUNCA se corta a mitad de <p>.
+            if longitud_actual >= max_chars:
+                chunks.append("\n".join(chunk_actual))
+                chunk_actual = []
+                longitud_actual = 0
+                
+        # Guardar lo que haya sobrado en el último bloque
+        if chunk_actual:
+            chunks.append("\n".join(chunk_actual))
+            
+        return chunks
+
+    def procesar_y_enviar_chunks(self, item, spider):
         headers = {
             'Authorization': f'Bearer {self.meilisearch_key}',
             'Content-Type': 'application/json'
         }
         
-        # 👇 EL MÉTODO GOOGLE: HUELLA DACTILAR DEL CONTENIDO 👇
-        # Juntamos título y contenido para crear una firma única
-        texto_para_firma = f"{item['titulo']} {item['contenido']}"
+        # El Hash Padre (para agrupar visualmente en tu frontend)
+        grupo_id = hashlib.md5(item['url'].encode('utf-8')).hexdigest()
         
-        # Generamos un ID alfanumérico único basado en el texto (MD5 Hash)
-        doc_id = hashlib.md5(texto_para_firma.encode('utf-8')).hexdigest()
-        item['id'] = doc_id
+        # OJO AQUÍ: Usamos el html_crudo que deberemos enviarle desde la araña
+        # Si es un PDF de PyMuPDF, le pasaremos el texto normal y podemos tener una función de fallback
+        html_crudo = item.get('html_crudo', item.get('contenido', ''))
         
-        # 👇 LA MAGIA PARA CALLAR A MEILISEARCH 👇
-        item['_vectors'] = {"default": None}
-        item['estado_ia'] = 'pendiente'  # <--- NUESTRO TICKET DE TURNO
+        if '<' in html_crudo and '>' in html_crudo:
+            textos_troceados = self.trocear_por_estructura_html(html_crudo)
+        else:
+            # Si viene del PDF y no tiene HTML, usaríamos una división por puntos y aparte (\n\n)
+            textos_troceados = [t for t in html_crudo.split('\n\n') if len(t.strip()) > 20]
         
-        url_api = f"{self.meilisearch_url}/indexes/{self.indice}/documents"
+        documentos_a_enviar = []
         
-        try:
-            # Hacemos la llamada POST a la API de Meilisearch
-            respuesta = requests.post(url_api, headers=headers, json=[item], timeout=5)
-            if respuesta.status_code not in [200, 202]:
-                spider.logger.error(f"❌ Error al enviar a Meilisearch: {respuesta.text}")
-        except Exception as e:
-            spider.logger.error(f"🔌 Error de conexión con Meilisearch: {e}")
+        for indice, texto_chunk in enumerate(textos_troceados):
+            if not texto_chunk.strip(): continue
+            
+            # HASH DE ACTUALIZACIÓN LIMPIA: URL + Indice
+            # Si el gobierno actualiza el artículo 4 (chunk 4), el ID será el mismo y lo sobrescribirá.
+            firma_chunk = f"{item['url']}_chunk_{indice}"
+            chunk_id = hashlib.md5(firma_chunk.encode('utf-8')).hexdigest()
+            
+            doc_chunk = {
+                'id': chunk_id,
+                'grupo_id': grupo_id, 
+                'url': item['url'],
+                'dominio': item['dominio'],
+                'categoria': item['categoria'],
+                'titulo': item['titulo'], 
+                'contenido': texto_chunk,
+                'orden_lectura': indice + 1, 
+                'fecha_indexacion': item['fecha_indexacion'],
+                '_vectors': {"default": None},
+                'estado_ia': 'pendiente' 
+            }
+            documentos_a_enviar.append(doc_chunk)
+
+        if documentos_a_enviar:
+            url_api = f"{self.meilisearch_url}/indexes/{self.indice}/documents"
+            try:
+                # Enviamos en lotes de 100 para no ahogar la petición HTTP si la ley es infinita
+                lote_size = 100
+                for i in range(0, len(documentos_a_enviar), lote_size):
+                    lote = documentos_a_enviar[i:i + lote_size]
+                    requests.post(url_api, headers=headers, json=lote, timeout=10)
+                spider.logger.info(f"✅ Enviados {len(documentos_a_enviar)} chunks lógicos de: {item['titulo'][:30]}...")
+            except Exception as e:
+                spider.logger.error(f"🔌 Error de conexión con Meilisearch: {e}")
