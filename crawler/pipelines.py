@@ -4,7 +4,7 @@ import os
 import hashlib
 from datetime import datetime
 from bs4 import BeautifulSoup 
-import sqlite3 # <--- NUEVO
+import sqlite3
 
 class ProcesadorGobiernoPipeline:
     
@@ -12,7 +12,6 @@ class ProcesadorGobiernoPipeline:
         self.meilisearch_url = os.getenv('MEILISEARCH_URL', 'http://meilisearch:7700')
         self.meilisearch_key = os.getenv('MEILISEARCH_KEY', 'SuperSecreta123')
         self.indice = 'documentos_legales'
-        self.configurado = False
         
         # 👇 CREAMOS EL BUZÓN COMPARTIDO CON EL MINERO 👇
         os.makedirs('datos', exist_ok=True)
@@ -40,19 +39,14 @@ class ProcesadorGobiernoPipeline:
                 spider.logger.info(f"📝 PDF anotado en la cola: {item['url']}")
             except Exception as e:
                 spider.logger.error(f"❌ Error en SQLite: {e}")
-            return item # Terminamos aquí para los PDFs
+            return item 
 
         # --- FLUJO NORMAL PARA HTML ---
-        if not self.configurado:
-            self.configurar_indice(spider)
-
         item['categoria'] = self.clasificar(item['url'], item['titulo'], item.get('contenido', ''))
         item['fecha_indexacion'] = datetime.utcnow().strftime('%Y-%m-%dT%H:%M:%SZ')
 
         self.procesar_y_enviar_chunks(item, spider)
         return item
-
-    # ... (Resto de tus funciones: configurar_indice, clasificar, trocear_por_estructura_html, procesar_y_enviar_chunks se quedan EXACTAMENTE IGUAL) ...
 
     def clasificar(self, url, titulo, contenido):
         texto_total = f"{url} {titulo} {contenido}".lower()
@@ -105,7 +99,7 @@ class ProcesadorGobiernoPipeline:
             'Content-Type': 'application/json'
         }
         
-        # 1. EL ESCUDO ANTI-MONOPOLIO (Hash Padre basado en Identidad)
+        # 1. EL ESCUDO ANTI-MONOPOLIO
         identidad_base = item.get('url_canonica') or f"{item['dominio']}_{item['titulo']}"
         origen_id = hashlib.md5(identidad_base.encode('utf-8')).hexdigest()
         
@@ -117,13 +111,13 @@ class ProcesadorGobiernoPipeline:
         for indice, texto_chunk in enumerate(textos_troceados):
             if not texto_chunk.strip(): continue
             
-            # 3. HASH DEL FRAGMENTO (Identidad + Indice)
+            # 3. HASH DEL FRAGMENTO
             firma_chunk = f"{identidad_base}_chunk_{indice}"
             chunk_id = hashlib.md5(firma_chunk.encode('utf-8')).hexdigest()
             
             doc_chunk = {
                 'id': chunk_id,
-                'origen_id': origen_id, # <--- Para agrupar en el Frontend
+                'origen_id': origen_id, 
                 'url': item.get('url_canonica', item['url']),
                 'dominio': item['dominio'],
                 'categoria': item['categoria'],
@@ -131,7 +125,6 @@ class ProcesadorGobiernoPipeline:
                 'contenido': texto_chunk,
                 'orden_lectura': indice + 1, 
                 'fecha_indexacion': item['fecha_indexacion'],
-                # ❌ ELIMINADA LA LÍNEA DE _vectors: {"default": None} ❌
                 'estado_ia': 'pendiente' 
             }
             documentos_a_enviar.append(doc_chunk)
@@ -144,7 +137,7 @@ class ProcesadorGobiernoPipeline:
                     lote = documentos_a_enviar[i:i + lote_size]
                     respuesta = requests.post(url_api, headers=headers, json=lote, timeout=10)
                     
-                    # 👇 EL CHIVATO DE ERRORES RECUPERADO 👇
+                    # Chivato de errores
                     if respuesta.status_code not in [200, 202]:
                         spider.logger.error(f"❌ Meilisearch rechazó el chunk: {respuesta.text}")
                         
