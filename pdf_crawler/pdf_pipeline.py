@@ -9,25 +9,8 @@ class PdfPipeline:
         self.meilisearch_url = os.getenv('MEILISEARCH_URL', 'http://meilisearch:7700')
         self.meilisearch_key = os.getenv('MEILISEARCH_KEY', 'SuperSecreta123')
         self.indice = 'documentos_legales'
-        self.configurado = False
-
-    def configurar_indice(self, spider):
-        headers = {'Authorization': f'Bearer {self.meilisearch_key}'}
-        config = {
-            "filterableAttributes": ["categoria", "dominio", "origen_id", "estado_ia"],
-            "sortableAttributes": ["fecha_indexacion"]
-        }
-        requests.patch(
-            f"{self.meilisearch_url}/indexes/{self.indice}/settings", 
-            headers=headers, json=config
-        )
-        self.configurado = True
-        spider.logger.info("⚙️ Índice configurado para PDFs.")
 
     def process_item(self, item, spider):
-        if not self.configurado:
-            self.configurar_indice(spider)
-            
         # 1. EL ESCUDO ANTI-MONOPOLIO (Hash Padre)
         identidad_base = f"{item['dominio']}_{item['titulo']}"
         origen_id = hashlib.md5(identidad_base.encode('utf-8')).hexdigest()
@@ -55,7 +38,6 @@ class PdfPipeline:
                 'contenido': texto_chunk,
                 'orden_lectura': indice + 1, 
                 'fecha_indexacion': fecha_indexacion,
-                # ❌ ELIMINADA LA LÍNEA DE _vectors: {"default": None} ❌
                 'estado_ia': 'pendiente' 
             }
             documentos_a_enviar.append(doc_chunk)
@@ -66,7 +48,7 @@ class PdfPipeline:
                 headers = {'Authorization': f'Bearer {self.meilisearch_key}', 'Content-Type': 'application/json'}
                 respuesta = requests.post(url_api, headers=headers, json=documentos_a_enviar, timeout=15)
                 
-                # 👇 EL CHIVATO DE ERRORES RECUPERADO 👇
+                # Chivato de errores
                 if respuesta.status_code not in [200, 202]:
                     spider.logger.error(f"❌ Meilisearch rechazó el PDF: {respuesta.text}")
                 else:
