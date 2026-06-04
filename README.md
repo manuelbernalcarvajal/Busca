@@ -87,6 +87,22 @@ services:
       options:
         max-size: "30m"
         max-file: "3"
+  pdf_crawler:
+    image: ghcr.io/manuelbernalcarvajal/busca-pdf-crawler:${APP_VERSION:-latest} # Imagen propia
+    container_name: arana-pdfs
+    environment:
+      - MEILISEARCH_URL=http://meilisearch:7700
+      - MEILISEARCH_KEY=${MEILI_MASTER_KEY}
+    volumes:
+      - crawler_data:/app/datos # <--- BUZÓN COMPARTIDO (Mismo volumen que crawler)
+    depends_on:
+      - meilisearch
+    restart: unless-stopped
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "30m"
+        max-file: "3"
 
 volumes:
   meili_data:
