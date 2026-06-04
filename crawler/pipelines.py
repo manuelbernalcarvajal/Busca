@@ -104,17 +104,19 @@ class ProcesadorGobiernoPipeline:
             'Content-Type': 'application/json'
         }
         
-        # El Hash Padre (para agrupar visualmente en tu frontend)
-        grupo_id = hashlib.md5(item['url'].encode('utf-8')).hexdigest()
+        # 1. LA IDENTIDAD INQUEBRANTABLE (Anti-Duplicados)
+        # Usamos la URL canónica. Si por algún motivo falló, usamos Dominio + Título.
+        identidad_base = item.get('url_canonica') or f"{item['dominio']}_{item['titulo']}"
         
-        # OJO AQUÍ: Usamos el html_crudo que deberemos enviarle desde la araña
-        # Si es un PDF de PyMuPDF, le pasaremos el texto normal y podemos tener una función de fallback
+        # El Hash Padre (para agrupar en tu frontend)
+        grupo_id = hashlib.md5(identidad_base.encode('utf-8')).hexdigest()
+        
+        # 2. Troceamos (Usando el HTML crudo si existe, como te pasé antes)
         html_crudo = item.get('html_crudo', item.get('contenido', ''))
-        
         if '<' in html_crudo and '>' in html_crudo:
             textos_troceados = self.trocear_por_estructura_html(html_crudo)
         else:
-            # Si viene del PDF y no tiene HTML, usaríamos una división por puntos y aparte (\n\n)
+            # Fallback para PDFs
             textos_troceados = [t for t in html_crudo.split('\n\n') if len(t.strip()) > 20]
         
         documentos_a_enviar = []
@@ -122,15 +124,16 @@ class ProcesadorGobiernoPipeline:
         for indice, texto_chunk in enumerate(textos_troceados):
             if not texto_chunk.strip(): continue
             
-            # HASH DE ACTUALIZACIÓN LIMPIA: URL + Indice
-            # Si el gobierno actualiza el artículo 4 (chunk 4), el ID será el mismo y lo sobrescribirá.
-            firma_chunk = f"{item['url']}_chunk_{indice}"
+            # 3. EL HASH DEL FRAGMENTO (Identidad + Número de trozo)
+            # Si el crawler lee 5 URLs distintas del Código Penal, generará 5 veces
+            # el mismo hash para el artículo 1. Meilisearch simplemente lo sobrescribirá.
+            firma_chunk = f"{identidad_base}_chunk_{indice}"
             chunk_id = hashlib.md5(firma_chunk.encode('utf-8')).hexdigest()
             
             doc_chunk = {
                 'id': chunk_id,
                 'grupo_id': grupo_id, 
-                'url': item['url'],
+                'url': item.get('url_canonica', item['url']), # Guardamos la buena
                 'dominio': item['dominio'],
                 'categoria': item['categoria'],
                 'titulo': item['titulo'], 
@@ -141,6 +144,8 @@ class ProcesadorGobiernoPipeline:
                 'estado_ia': 'pendiente' 
             }
             documentos_a_enviar.append(doc_chunk)
+
+        # ... (aquí sigue el código de enviarlo a Meilisearch con requests.post) ...
 
         if documentos_a_enviar:
             url_api = f"{self.meilisearch_url}/indexes/{self.indice}/documents"
