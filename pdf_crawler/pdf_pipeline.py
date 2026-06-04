@@ -50,12 +50,12 @@ class PdfPipeline:
                 'origen_id': origen_id, 
                 'url': item['url'],
                 'dominio': item['dominio'],
-                'categoria': 'Poder Judicial', # Forzamos la categoría para los PDFs judiciales
+                'categoria': 'Poder Judicial',
                 'titulo': item['titulo'], 
                 'contenido': texto_chunk,
                 'orden_lectura': indice + 1, 
                 'fecha_indexacion': fecha_indexacion,
-                '_vectors': {"default": None},
+                # ❌ ELIMINADA LA LÍNEA DE _vectors: {"default": None} ❌
                 'estado_ia': 'pendiente' 
             }
             documentos_a_enviar.append(doc_chunk)
@@ -64,8 +64,14 @@ class PdfPipeline:
             url_api = f"{self.meilisearch_url}/indexes/{self.indice}/documents"
             try:
                 headers = {'Authorization': f'Bearer {self.meilisearch_key}', 'Content-Type': 'application/json'}
-                requests.post(url_api, headers=headers, json=documentos_a_enviar, timeout=15)
-                spider.logger.info(f"✅ Enviados {len(documentos_a_enviar)} chunks del PDF: {item['titulo'][:30]}")
+                respuesta = requests.post(url_api, headers=headers, json=documentos_a_enviar, timeout=15)
+                
+                # 👇 EL CHIVATO DE ERRORES RECUPERADO 👇
+                if respuesta.status_code not in [200, 202]:
+                    spider.logger.error(f"❌ Meilisearch rechazó el PDF: {respuesta.text}")
+                else:
+                    spider.logger.info(f"✅ Enviados {len(documentos_a_enviar)} chunks del PDF: {item['titulo'][:30]}")
+                    
             except Exception as e:
                 spider.logger.error(f"🔌 Error de conexión con Meilisearch: {e}")
                 
