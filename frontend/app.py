@@ -41,10 +41,14 @@ def buscar():
     
     try:
         url_interna = f"{MEILISEARCH_URL}/indexes/{INDICE}/search"
-        respuesta = requests.post(url_interna, headers=headers, json=datos_usuario, timeout=10) # Aumentamos timeout por seguridad
-        return jsonify(respuesta.json())
+        respuesta = requests.post(url_interna, headers=headers, json=datos_usuario, timeout=10)
+        
+        # 👇 ESTA ES LA LÍNEA NUEVA 👇
+        return jsonify(respuesta.json()), respuesta.status_code
+        
     except Exception as e:
-        return jsonify({"error": "Error interno del servidor"}), 500
+        # 👇 AQUÍ TAMBIÉN CAMBIAMOS PARA QUE IMPRIMA EL ERROR REAL 👇
+        return jsonify({"error": str(e)}), 500
 
 # 3. El Chivato de Estadísticas (Para el contador en tiempo real)
 @app.route('/api/stats', methods=['GET'])
