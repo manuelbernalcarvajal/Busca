@@ -15,30 +15,36 @@ index = client.index(INDICE)
 def asegurar_configuracion():
     print("🛠️ Verificando configuración de Meilisearch...")
     
-    # --- NUEVO: Comprobar y crear el índice si no existe ---
     try:
         client.get_index(INDICE)
     except meilisearch.errors.MeilisearchApiError as e:
         if getattr(e, 'code', '') == 'index_not_found':
-            print(f"⚠️ Índice '{INDICE}' no existe. Creándolo desde cero...")
-            client.create_index(INDICE)
-            time.sleep(2) # Le damos 2 segundos a Meilisearch para que respire
+            print(f"⚠️ Índice '{INDICE}' no existe. Creándolo...")
+            tarea = client.create_index(INDICE)
+            client.wait_for_task(tarea.task_uid) # <--- Aseguramos que se crea antes de seguir
         else:
             raise e
-    # --------------------------------------------------------
 
     settings = index.get_settings()
     filterable = settings.get('filterableAttributes', [])
+    sortable = settings.get('sortableAttributes', []) # <--- NUEVO
     
-    # Nos aseguramos de tener estado_ia, origen_id (del pipeline) y cluster_id (temático)
-    nuevos_filtros = list(set(filterable + ['_vectors', 'estado_ia', 'origen_id', 'cluster_id']))
+    # 1. AÑADIMOS LA 'categoria' PARA QUE FUNCIONE EL DESPLEGABLE
+    nuevos_filtros = list(set(filterable + ['_vectors', 'estado_ia', 'origen_id', 'cluster_id', 'categoria']))
     
     if sorted(filterable) != sorted(nuevos_filtros):
         print("🔧 Configurando filtros avanzados y esperando...")
         tarea_filtros = index.update_filterable_attributes(nuevos_filtros)
         client.wait_for_task(tarea_filtros.task_uid)
+
+    # 2. AÑADIMOS LA FECHA PARA QUE FUNCIONEN LAS NOVEDADES
+    nuevos_sortables = list(set(sortable + ['fecha_indexacion']))
+    if sorted(sortable) != sorted(nuevos_sortables):
+        print("🔧 Configurando campos ordenables y esperando...")
+        tarea_sort = index.update_sortable_attributes(nuevos_sortables)
+        client.wait_for_task(tarea_sort.task_uid)
     
-    print("🔧 Aplicando configuración de embedders y esperando...")
+    print("🔧 Aplicando configuración de embedders...")
     tarea_embedders = index.update_settings({
         "embedders": {
             "default": {
