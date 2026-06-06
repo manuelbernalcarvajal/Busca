@@ -38,7 +38,8 @@ class PdfPipeline:
                 'contenido': texto_chunk,
                 'orden_lectura': indice + 1, 
                 'fecha_indexacion': fecha_indexacion,
-                'estado_ia': 'pendiente' 
+                'estado_ia': 'pendiente',
+                '_vectors': {'default': None}
             }
             documentos_a_enviar.append(doc_chunk)
 
