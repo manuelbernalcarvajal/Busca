@@ -4,7 +4,7 @@ from scrapy.linkextractors import LinkExtractor
 from scrapy.linkextractors import IGNORED_EXTENSIONS # <--- NUEVO
 import os
 import re
-from urllib.parse import urlparse, urlunparse
+from urllib.parse import urlparse, urlunparse, parse_qs, urlencode
 
 # Quitamos 'pdf' de la lista negra por defecto de Scrapy
 EXTENSIONES_PERMITIDAS = [ext for ext in IGNORED_EXTENSIONS if ext != 'pdf']
@@ -23,8 +23,19 @@ def cargar_dominios_permitidos():
 
 def amputar_parametros_basura(url):
     parsed = urlparse(url)
+    
+    # 1. ESCUDO PARA EL BOE: Solo permitimos el documento principal (ID)
+    if 'boe.es' in parsed.netloc and 'act.php' in parsed.path:
+        params = parse_qs(parsed.query)
+        if 'id' in params:
+            # Reconstruimos la URL solo con el parámetro 'id', matando las pestañas como &tn=5
+            new_query = urlencode({'id': params['id'][0]})
+            return urlunparse((parsed.scheme, parsed.netloc, parsed.path, '', new_query, ''))
+            
+    # 2. Limpieza general para otras webs (Sedes electrónicas, etc.)
     if 'idProvincia=' in parsed.query:
         return urlunparse((parsed.scheme, parsed.netloc, parsed.path, parsed.params, '', parsed.fragment))
+        
     return url
 
 class GobSpider(CrawlSpider):
