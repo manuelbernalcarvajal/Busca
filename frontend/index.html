@@ -234,7 +234,7 @@
                 limit: LIMITE_POR_PAGINA,
                 offset: offsetActual,
                 attributesToHighlight: ["contenido", "titulo"], 
-                attributesToCrop: ["contenido:140"], 
+                attributesToCrop: ["contenido:540"], 
                 cropMarker: "..."
             };
             
@@ -348,7 +348,7 @@
                 const otrasFuentesIds = Object.keys(cluster.fuentes).filter(id => id !== idOrigenPrincipal);
                 
                 // Aplicamos nuestra función blindada al texto principal (muy largo)
-                const textoPrincipal = obtenerTexto(principal, 400);
+                const textoPrincipal = obtenerTexto(principal, 650);
 
                 let html = `
                 <div class="resultado">
@@ -363,7 +363,7 @@
                     <details class="desplegable-interno">
                         <summary>📄 Otros fragmentos de la misma fuente de interés (${fragmentosMismaFuente.length})</summary>
                         <ul>${fragmentosMismaFuente.map(f => `
-                            <li><div class="fragmento-texto">${obtenerTexto(f, 250)}</div></li>
+                            <li><div class="fragmento-texto">${obtenerTexto(f, 650)}</div></li>
                         `).join('')}</ul>
                     </details>
                     `;
@@ -381,7 +381,7 @@
                             let subHtml = `
                             <li>
                                 <div>🔗 <a href="${primeraDeOtraFuente.url}" target="_blank" style="color: #1a0dab; font-weight: 600; text-decoration: none;">${primeraDeOtraFuente.dominio}</a> <span class="titulo-enlace">- ${primeraDeOtraFuente.titulo}</span></div>
-                                <div class="fragmento-texto">${obtenerTexto(primeraDeOtraFuente, 250)}</div>
+                                <div class="fragmento-texto">${obtenerTexto(primeraDeOtraFuente, 650)}</div>
                             `;
                             
                             // Fragmentos adicionales de esa otra fuente
@@ -390,7 +390,7 @@
                                 <details class="desplegable-interno" style="margin-top: 8px;">
                                     <summary>Más fragmentos de esta fuente (${otrosFragmentosDeEsaFuente.length})</summary>
                                     <ul>${otrosFragmentosDeEsaFuente.map(f => `
-                                        <li><div class="fragmento-texto">${obtenerTexto(f, 250)}</div></li>
+                                        <li><div class="fragmento-texto">${obtenerTexto(f, 650)}</div></li>
                                     `).join('')}</ul>
                                 </details>`;
                             }
