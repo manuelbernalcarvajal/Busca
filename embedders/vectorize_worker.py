@@ -20,7 +20,7 @@ def asegurar_configuracion():
     except meilisearch.errors.MeilisearchApiError as e:
         if getattr(e, 'code', '') == 'index_not_found':
             print(f"⚠️ Índice '{INDICE}' no existe. Creándolo...")
-            tarea = client.create_index(INDICE)
+            tarea = client.create_index(INDICE, {'primaryKey': 'id'})
             client.wait_for_task(tarea.task_uid) # <--- Aseguramos que se crea antes de seguir
         else:
             raise e
