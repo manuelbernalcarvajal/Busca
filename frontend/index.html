@@ -3,113 +3,118 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Buscador jurídico-administrativo</title>
+    <title>Buscador Jurisprudencial y Administrativo</title>
     <link rel="icon" href="https://apdespanol.es.eu.org/logoau.png">
     <style>
-        :root { --primary: #1a73e8; --text: #202124; --bg: #f8f9fa; --card-bg: #ffffff; }
+        :root { 
+            --primary: #0f3b5e; /* Azul marino más sobrio e institucional */
+            --secondary: #455a64; /* Gris pizarra */
+            --text: #202124; 
+            --text-light: #5f6368;
+            --bg: #f4f6f8; 
+            --card-bg: #ffffff; 
+            --border: #dadce0;
+        }
         body { font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: var(--bg); color: var(--text); margin: 0; padding: 0; }
         
-        .header { background: var(--card-bg); padding: 20px; text-align: center; border-bottom: 1px solid #dadce0; box-shadow: 0 1px 3px rgba(0,0,0,0.05); position: relative; }
-        .logo { font-size: 2em; font-weight: 700; color: var(--primary); letter-spacing: -0.5px; }
+        .header { background: var(--card-bg); padding: 20px; text-align: center; border-bottom: 1px solid var(--border); box-shadow: 0 1px 3px rgba(0,0,0,0.02); position: relative; }
+        .logo { font-size: 1.8em; font-weight: 600; color: var(--primary); letter-spacing: -0.3px; display: flex; align-items: center; justify-content: center; gap: 15px; }
         
-        .contador-paginas { position: absolute; top: 20px; right: 20px; background: #e8eaed; padding: 6px 15px; border-radius: 20px; font-size: 0.85em; color: #5f6368; font-weight: 600; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+        .contador-paginas { position: absolute; top: 20px; right: 20px; background: #f1f3f4; padding: 6px 15px; border-radius: 4px; font-size: 0.85em; color: var(--text-light); font-weight: 600; border: 1px solid var(--border); }
         
         .container { max-width: 900px; margin: 40px auto; padding: 0 20px; }
         
         /* Controles de Búsqueda y Filtros */
-        .search-container { display: flex; flex-direction: column; align-items: center; margin-bottom: 20px; gap: 15px; }
-        .search-box { width: 100%; max-width: 700px; padding: 16px 24px; font-size: 1.2em; border: 1px solid #dfe1e5; border-radius: 30px; box-shadow: 0 1px 6px rgba(32,33,36,0.1); outline: none; transition: box-shadow 0.2s; }
-        .search-box:focus { box-shadow: 0 2px 12px rgba(32,33,36,0.2); }
+        .search-container { display: flex; flex-direction: column; align-items: center; margin-bottom: 25px; gap: 15px; }
+        .search-box { width: 100%; max-width: 700px; padding: 16px 24px; font-size: 1.1em; border: 1px solid var(--border); border-radius: 6px; box-shadow: 0 2px 4px rgba(0,0,0,0.02); outline: none; transition: all 0.2s; background: #fff; }
+        .search-box:focus { border-color: var(--primary); box-shadow: 0 2px 8px rgba(15, 59, 94, 0.1); }
         
         .filtros-bar { display: flex; gap: 15px; align-items: center; flex-wrap: wrap; justify-content: center; width: 100%; max-width: 700px; }
-        select { padding: 8px 15px; border-radius: 20px; border: 1px solid #dfe1e5; background: white; font-size: 0.9em; cursor: pointer; outline: none; }
-        .checkbox-label { font-size: 0.9em; display: flex; align-items: center; gap: 5px; cursor: pointer; color: #5f6368; }
+        select { padding: 8px 15px; border-radius: 4px; border: 1px solid var(--border); background: white; font-size: 0.9em; cursor: pointer; outline: none; color: var(--text); }
+        .checkbox-label { font-size: 0.9em; display: flex; align-items: center; gap: 5px; cursor: pointer; color: var(--text-light); }
         
-        /* Botón Imprimir */
-        .btn-imprimir { margin-left: auto; background: #e8eaed; color: #3c4043; border: none; padding: 8px 15px; border-radius: 20px; font-size: 0.9em; font-weight: 600; cursor: pointer; transition: 0.2s; }
-        .btn-imprimir:hover { background: #d2e3fc; color: var(--primary); }
+        /* Botones */
+        .btn-secundario { margin-left: auto; background: white; color: var(--text-light); border: 1px solid var(--border); padding: 8px 15px; border-radius: 4px; font-size: 0.9em; font-weight: 500; cursor: pointer; transition: 0.2s; }
+        .btn-secundario:hover { background: #f8f9fa; color: var(--primary); }
 
         /* Historial */
-        .historial-tags { display: flex; justify-content: center; gap: 10px; flex-wrap: wrap; margin-bottom: 30px; }
-        .tag { background: #e8eaed; color: #3c4043; padding: 6px 14px; border-radius: 16px; font-size: 0.9em; cursor: pointer; border: none; transition: background 0.2s; }
-        .tag:hover { background: #d2e3fc; color: var(--primary); }
+        .historial-tags { display: flex; justify-content: center; gap: 8px; flex-wrap: wrap; margin-bottom: 30px; }
+        .tag { background: white; color: var(--text-light); padding: 6px 14px; border-radius: 4px; font-size: 0.85em; cursor: pointer; border: 1px solid var(--border); transition: all 0.2s; }
+        .tag:hover { background: #f1f3f4; color: var(--primary); border-color: var(--primary); }
 
-        /* Tarjetas */
-        .grid-resultados { display: flex; flex-direction: column; gap: 20px; }
-        .resultado { background: var(--card-bg); padding: 24px; border-radius: 12px; box-shadow: 0 2px 6px rgba(0,0,0,0.05); border: 1px solid #f1f3f4; }
-        .etiqueta { display: inline-block; background: #e8f0fe; color: var(--primary); padding: 4px 10px; border-radius: 6px; font-size: 0.8em; font-weight: 600; margin-bottom: 10px; }
-        .titulo { font-size: 1.3em; color: #1a0dab; margin-bottom: 10px; font-weight: 500; }
-        .texto-destacado { font-size: 1.05em; line-height: 1.6; color: #4d5156; display: block; margin-bottom: 12px; }
-        em { background-color: #fce8e6; color: #d93025; font-style: normal; font-weight: bold; border-radius: 3px; padding: 0 2px; }
+        /* Tarjetas de Resultados */
+        .grid-resultados { display: flex; flex-direction: column; gap: 16px; }
+        .resultado { background: var(--card-bg); padding: 24px; border-radius: 6px; box-shadow: 0 1px 3px rgba(0,0,0,0.04); border: 1px solid var(--border); }
+        .etiqueta { display: inline-block; background: #eef2f5; color: var(--primary); padding: 4px 8px; border-radius: 3px; font-size: 0.75em; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; }
+        .titulo { font-size: 1.2em; color: var(--primary); margin: 12px 0; font-weight: 600; line-height: 1.4; }
+        .titulo a { color: inherit; text-decoration: none; }
+        .titulo a:hover { text-decoration: underline; }
+        .texto-destacado { font-size: 0.95em; line-height: 1.6; color: #3c4043; display: block; }
+        em { background-color: transparent; color: var(--primary); font-style: normal; font-weight: bold; border-bottom: 1px solid var(--primary); }
         
-        /* Estilos para el RAG Anidado (Amarillo y Morado) */
-        .desplegable-interno { margin-top: 10px; background: #fffbe6; border-left: 3px solid #fbbc04; padding: 8px; border-radius: 4px; }
-        .desplegable-interno summary { color: #b07d00; font-size: 0.9em; font-weight: 600; cursor: pointer; }
-        .desplegable-interno ul { list-style: none; padding-left: 10px; margin-top: 8px; }
-        .desplegable-interno li { margin-bottom: 8px; padding-bottom: 8px; border-bottom: 1px dashed #fce8b2; font-size: 0.95em; color: #4d5156; }
-        .desplegable-interno li:last-child { border-bottom: none; margin-bottom: 0; padding-bottom: 0; }
-
-        .desplegable-externo { margin-top: 20px; background: #f3e8fd; border-left: 3px solid #a142f4; padding: 12px; border-radius: 4px; }
-        .desplegable-externo summary { color: #681da8; font-size: 0.95em; font-weight: 600; cursor: pointer; }
-        .desplegable-externo ul { list-style: none; padding-left: 10px; margin-top: 10px; }
-        .desplegable-externo li { margin-bottom: 15px; padding-bottom: 15px; border-bottom: 1px solid #d2b3f9; }
-        .desplegable-externo li:last-child { border-bottom: none; margin-bottom: 0; padding-bottom: 0; }
-        .fragmento-texto { font-size: 0.9em; color: #5f6368; line-height: 1.4; margin-top: 4px; }
-        .titulo-enlace { color: #5f6368; font-size: 0.85em; margin-left: 5px; }
+        /* Acordeones Corporativos (RAG Anidado) */
+        details { margin-top: 15px; padding: 12px 15px; border-radius: 4px; background: #fafbfc; border: 1px solid #e1e4e8; }
+        .desplegable-interno { border-left: 3px solid #90a4ae; }
+        .desplegable-externo { border-left: 3px solid var(--primary); }
+        
+        details summary { font-size: 0.9em; font-weight: 600; cursor: pointer; color: var(--secondary); outline: none; user-select: none; }
+        details ul { list-style: none; padding-left: 0; margin: 12px 0 0 0; }
+        details li { margin-bottom: 12px; padding-bottom: 12px; border-bottom: 1px solid #eaebed; }
+        details li:last-child { border-bottom: none; margin-bottom: 0; padding-bottom: 0; }
+        
+        .fragmento-texto { font-size: 0.9em; color: var(--text-light); line-height: 1.5; margin-top: 6px; }
+        .titulo-enlace { color: var(--secondary); font-size: 0.85em; margin-left: 5px; font-weight: 500; }
 
         /* Botón Cargar Más */
-        .btn-cargar-mas { display: none; margin: 30px auto; padding: 12px 25px; background: white; border: 1px solid #dadce0; border-radius: 20px; color: var(--primary); font-size: 1em; font-weight: 600; cursor: pointer; text-align: center; box-shadow: 0 1px 3px rgba(0,0,0,0.05); transition: 0.2s; }
-        .btn-cargar-mas:hover { background: #f8f9fa; box-shadow: 0 1px 6px rgba(0,0,0,0.1); }
+        .btn-cargar-mas { display: none; margin: 30px auto; padding: 12px 30px; background: white; border: 1px solid var(--border); border-radius: 4px; color: var(--primary); font-size: 0.95em; font-weight: 600; cursor: pointer; text-align: center; transition: 0.2s; width: 100%; max-width: 300px; }
+        .btn-cargar-mas:hover { background: #f8f9fa; border-color: var(--primary); }
 
-        /* Banner de Cookies UE */
+        /* Banner de Cookies */
         .cookie-banner { position: fixed; bottom: 0; left: 0; width: 100%; background: #202124; color: white; padding: 15px 20px; text-align: center; font-size: 0.9em; box-sizing: border-box; display: none; z-index: 1000; justify-content: center; align-items: center; gap: 20px; flex-wrap: wrap; }
-        .cookie-btn { background: var(--primary); color: white; border: none; padding: 8px 20px; border-radius: 4px; cursor: pointer; font-weight: bold; }
-        .cookie-btn:hover { background: #1765cc; }
+        .cookie-btn { background: #ffffff; color: #202124; border: none; padding: 8px 20px; border-radius: 4px; cursor: pointer; font-weight: 600; }
         
-        /* Responsive y Estilos de Impresión */
-        @media (max-width: 600px) {
-            .contador-paginas { position: static; display: inline-block; margin-top: 10px; }
-        }
-        
+        /* Cabecera Novedades */
+        .novedades-header { color: var(--secondary); text-align: center; font-weight: 500; font-size: 1.1em; margin-bottom: 20px; border-bottom: 1px solid var(--border); padding-bottom: 10px; }
+
         @media print {
             .header, .search-container, .historial-tags, .btn-cargar-mas, .cookie-banner, details summary { display: none !important; }
             body { background: white; color: black; }
             .container { margin: 0; padding: 0; max-width: 100%; }
             .resultado { border: 1px solid #ccc; box-shadow: none; page-break-inside: avoid; margin-bottom: 20px; }
-            details ul { display: block; padding-left: 0; }
-            a { text-decoration: none; color: black; }
+            details { border: none; padding: 0; }
+            details ul { display: block; }
         }
     </style>
 </head>
 <body>
 
     <header class="header">
-        <div class="logo" style="display: flex; align-items: center; justify-content: center; gap: 15px;">
-            <img src="https://apdespanol.es.eu.org/logoau.png" alt="Logo APD Español" style="height: 45px; width: auto; border-radius: 4px;">
-            Buscador jurídico-administrativo
+        <div class="logo">
+            <img src="https://apdespanol.es.eu.org/logoau.png" alt="Logo APD Español" style="height: 40px; width: auto; border-radius: 4px;">
+            Buscador Normativo
         </div>
-        <div id="contadorInfo" class="contador-paginas">Calculando...</div>
+        <div id="contadorInfo" class="contador-paginas">Sincronizando índice...</div>
     </header>
 
     <div class="container">
         <div class="search-container">
-            <input type="text" id="searchInput" class="search-box" placeholder="Busca leyes, trámites, ministerios..." onkeyup="manejarBusqueda(event)">
+            <input type="text" id="searchInput" class="search-box" placeholder="Introduzca términos de búsqueda (leyes, resoluciones, conceptos)..." onkeyup="manejarBusqueda(event)">
             
             <div class="filtros-bar">
                 <select id="filtroCategoria" onchange="ejecutarNuevaBusqueda()">
-                    <option value="TODAS">Todas las categorías</option>
-                    <option value="Tramite/Servicio">Trámites y Servicios</option>
-                    <option value="Legislacion/Normativa">Leyes y Normativa</option>
-                    <option value="Ayudas/Subvenciones">Ayudas y Subvenciones</option>
-                    <option value="Poder Judicial">Poder Judicial</option>
+                    <option value="TODAS">Todos los ámbitos</option>
+                    <option value="Tramite/Servicio">Administrativo y Trámites</option>
+                    <option value="Legislacion/Normativa">Legislación y Normativa</option>
+                    <option value="Ayudas/Subvenciones">Ayudas Públicas</option>
+                    <option value="Poder Judicial">Jurisprudencia (Poder Judicial)</option>
                 </select>
 
-                <label class="checkbox-label" title="Obliga al buscador a encontrar la frase exacta">
+                <label class="checkbox-label" title="Fuerza coincidencias literales de texto">
                     <input type="checkbox" id="busquedaExacta" onchange="ejecutarNuevaBusqueda()">
-                    Búsqueda Exacta ("")
+                    Coincidencia literal
                 </label>
 
-                <button class="btn-imprimir" onclick="window.print()" title="Imprimir resultados en papel">🖨️ Imprimir</button>
+                <button class="btn-secundario" onclick="window.print()" title="Imprimir informe de resultados">Imprimir</button>
             </div>
         </div>
         
@@ -117,12 +122,12 @@
         
         <div id="panelPrincipal"></div>
         
-        <button id="btnCargarMas" class="btn-cargar-mas" onclick="cargarMasResultados()">⬇️ Cargar más resultados</button>
+        <button id="btnCargarMas" class="btn-cargar-mas" onclick="cargarMasResultados()">Cargar más resultados</button>
     </div>
 
     <div class="cookie-banner" id="cookieBanner">
-        <span>Utilizamos cookies técnicas locales para guardar tu historial de búsqueda. No rastreamos datos personales.</span>
-        <button class="cookie-btn" onclick="aceptarCookies()">Entendido</button>
+        <span>Este sistema emplea almacenamiento local técnico para su historial de consultas. No se realiza rastreo externo.</span>
+        <button class="cookie-btn" onclick="aceptarCookies()">Aceptar</button>
     </div>
 
     <script>
@@ -133,13 +138,12 @@
             cargarEstadisticas(); 
         });
 
-        // --- SISTEMA DE ESTADÍSTICAS (CONTADOR) ---
         async function cargarEstadisticas() {
             try {
                 const res = await fetch('/api/stats');
                 const data = await res.json();
                 if (data.numberOfDocuments) {
-                    document.getElementById('contadorInfo').innerText = `📄 ${data.numberOfDocuments.toLocaleString('es-ES')} fragmentos oficiales`;
+                    document.getElementById('contadorInfo').innerText = `${data.numberOfDocuments.toLocaleString('es-ES')} registros consolidados`;
                 } else {
                     document.getElementById('contadorInfo').style.display = 'none';
                 }
@@ -148,7 +152,6 @@
             }
         }
 
-        // --- SISTEMA DE COOKIES (UE) ---
         function comprobarCookies() {
             if (!localStorage.getItem('cookiesAceptadas')) {
                 document.getElementById('cookieBanner').style.display = 'flex';
@@ -159,7 +162,6 @@
             document.getElementById('cookieBanner').style.display = 'none';
         }
 
-        // --- HISTORIAL ---
         function guardarEnHistorial(busqueda) {
             if (!busqueda || !localStorage.getItem('cookiesAceptadas')) return;
             let historial = JSON.parse(localStorage.getItem('historialBuscador') || '[]');
@@ -171,7 +173,7 @@
         function pintarHistorial() {
             let historial = JSON.parse(localStorage.getItem('historialBuscador') || '[]');
             document.getElementById('historialDiv').innerHTML = historial.map(b => 
-                `<button class="tag" onclick="buscarDesdeHistorial('${b}')">🕒 ${b}</button>`
+                `<button class="tag" onclick="buscarDesdeHistorial('${b}')">${b}</button>`
             ).join('');
         }
         function buscarDesdeHistorial(busqueda) {
@@ -179,7 +181,6 @@
             ejecutarNuevaBusqueda();
         }
 
-        // --- CONTROL DE PAGINACIÓN Y ESTADO ---
         let timerBusqueda;
         let queryActual = "";
         let offsetActual = 0;
@@ -209,7 +210,7 @@
             hitsAcumulados = [];
             guardarEnHistorial(query);
             
-            document.getElementById('panelPrincipal').innerHTML = '<p style="text-align:center;">Buscando...</p>';
+            document.getElementById('panelPrincipal').innerHTML = '<p style="text-align:center; color: #5f6368; font-style: italic;">Consultando base de datos...</p>';
             document.getElementById('btnCargarMas').style.display = 'none';
             
             hacerPeticionAPI();
@@ -217,7 +218,7 @@
 
         function cargarMasResultados() {
             offsetActual += LIMITE_POR_PAGINA;
-            document.getElementById('btnCargarMas').innerText = '⏳ Cargando...';
+            document.getElementById('btnCargarMas').innerText = 'Consultando índice...';
             hacerPeticionAPI();
         }
 
@@ -234,7 +235,7 @@
                 limit: LIMITE_POR_PAGINA,
                 offset: offsetActual,
                 attributesToHighlight: ["contenido", "titulo"], 
-                attributesToCrop: ["contenido:540"], 
+                attributesToCrop: ["contenido:80"], // Ajustado a palabras
                 cropMarker: "..."
             };
             
@@ -256,12 +257,12 @@
                     
                     if (datos.hits.length === LIMITE_POR_PAGINA) {
                         btnCargarMas.style.display = 'block';
-                        btnCargarMas.innerText = '⬇️ Cargar más resultados';
+                        btnCargarMas.innerText = 'Cargar más resultados';
                     } else {
                         btnCargarMas.style.display = 'none'; 
                     }
                 } else if (offsetActual === 0) {
-                    panel.innerHTML = `<p style="text-align:center; color:#d93025;">No hay resultados disponibles para esta búsqueda.</p>`;
+                    panel.innerHTML = `<p style="text-align:center; color:#5f6368;">No se han encontrado registros que coincidan con los criterios de búsqueda.</p>`;
                     btnCargarMas.style.display = 'none';
                 } else {
                     btnCargarMas.style.display = 'none'; 
@@ -269,8 +270,8 @@
 
             } catch (error) {
                 console.error(error);
-                if (offsetActual === 0) panel.innerHTML = '<p style="text-align:center; color:red;">Error de conexión.</p>';
-                btnCargarMas.innerText = '⬇️ Cargar más resultados'; 
+                if (offsetActual === 0) panel.innerHTML = '<p style="text-align:center; color:#d93025;">Error de comunicación con el servidor de búsqueda.</p>';
+                btnCargarMas.innerText = 'Cargar más resultados'; 
             }
         }
 
@@ -283,9 +284,8 @@
                         q: "", 
                         sort: ["fecha_indexacion:desc"], 
                         limit: 5,
-                        // 👇 AQUÍ ESTÁ LA MAGIA: Le pedimos el mismo tamaño que a los normales 👇
                         attributesToHighlight: ["contenido", "titulo"], 
-                        attributesToCrop: ["contenido:140"], 
+                        attributesToCrop: ["contenido:80"], 
                         cropMarker: "..."
                     })
                 });
@@ -293,39 +293,33 @@
                 
                 if(datos.hits && datos.hits.length > 0) {
                     hitsAcumulados = datos.hits;
-                    document.getElementById('panelPrincipal').innerHTML = `<h3 style="color:#5f6368; text-align:center;">🔥 Últimas normativas procesadas</h3>` + generarHTMLResultados(hitsAcumulados);
+                    document.getElementById('panelPrincipal').innerHTML = `<div class="novedades-header">Últimas normativas y resoluciones consolidadas</div>` + generarHTMLResultados(hitsAcumulados);
                     document.getElementById('btnCargarMas').style.display = 'none';
                 }
             } catch (e) {
-                console.error("Error cargando novedades:", e);
+                console.error("Error cargando índice reciente:", e);
             }
         }
 
-        // --- GENERADOR DE HTML CON RAG ANIDADO ---
-        // --- GENERADOR DE HTML CON RAG ANIDADO ---
-        const obtenerTexto = (hit, limite) => {
-            let textoFormateado = hit._formatted ? hit._formatted.contenido : "";
-            
-            // Medimos cuánto texto real hay (quitando puntos suspensivos y etiquetas <em>)
-            let textoLimpio = textoFormateado.replace(/<\/?em>/g, '').replace(/\./g, '').trim();
-            
-            // 🛡️ NUEVO FILTRO ANTI-BASURA: Cazamos los metadatos de OpenData
-            if (textoLimpio.startsWith('vURI') || textoLimpio.startsWith('Objeto')) {
-                return "<em>[Fragmento de datos técnicos omitido]</em>";
-            }
-            
-            // Tu escudo original + Comprobación de si Meilisearch resaltó algo
-            // (Si no hay <em>, es que la coincidencia fue vectorial y el recorte será malo)
-            if (textoLimpio.length < 50 || !textoFormateado.includes('<em>')) {
-                // Ignoramos a Meilisearch y cogemos el texto crudo cortándolo a tu medida original
-                return hit.contenido ? hit.contenido.substring(0, limite) + '...' : "Texto no disponible.";
-            }
-            
-            // Si todo está bien, devolvemos el texto formateado original
-            return textoFormateado;
-        };
+        // --- MOTOR DE RENDERIZADO Y LÓGICA DE CLUSTERS ---
+        function generarHTMLResultados(hits) {
+            const clusters = {};
 
-            // 1. Agrupación Doble (Por Temática y luego por Documento/Origen)
+            const obtenerTexto = (hit, limiteChars) => {
+                let textoFormateado = hit._formatted ? hit._formatted.contenido : "";
+                let textoLimpio = textoFormateado.replace(/<\/?em>/g, '').trim();
+                
+                if (textoLimpio.startsWith('vURI') || textoLimpio.startsWith('Objeto')) {
+                    return "<span style='color: #80868b; font-style: italic;'>[Fragmento de datos técnicos omitido]</span>";
+                }
+                
+                if (textoLimpio.length < 50 || !textoFormateado.includes('<em>')) {
+                    return hit.contenido ? hit.contenido.substring(0, limiteChars) + '...' : "Texto no disponible.";
+                }
+                
+                return textoFormateado;
+            };
+
             hits.forEach(hit => {
                 const idCluster = hit.cluster_id || hit.origen_id || hit.id;
                 const idOrigen = hit.origen_id || hit.id;
@@ -339,32 +333,38 @@
                 clusters[idCluster].fuentes[idOrigen].push(hit);
             });
 
-            // 2. Renderizado del HTML
             return '<div class="grid-resultados">' + Object.values(clusters).map(cluster => {
                 const principal = cluster.principal;
                 const idOrigenPrincipal = principal.origen_id || principal.id;
-                
-                // Fragmentos adicionales del MISMO documento principal
                 const fragmentosMismaFuente = cluster.fuentes[idOrigenPrincipal].slice(1); 
-                
-                // OTROS documentos distintos que hablan de lo mismo
                 const otrasFuentesIds = Object.keys(cluster.fuentes).filter(id => id !== idOrigenPrincipal);
                 
-                // Aplicamos nuestra función blindada al texto principal (muy largo)
                 const textoPrincipal = obtenerTexto(principal, 650);
+
+                // --- SELLO DE RIGOR ---
+                let selloRigor = "";
+                if (principal.calidad_texto) {
+                    if (principal.calidad_texto >= 8) {
+                        selloRigor = `<span style="font-size: 0.85em; color: #0f3b5e; font-weight: 600; margin-left: 12px; border-left: 1px solid var(--border); padding-left: 12px;">Calidad Jurídica: Alta</span>`;
+                    } else if (principal.calidad_texto >= 5) {
+                        selloRigor = `<span style="font-size: 0.85em; color: var(--text-light); font-weight: 500; margin-left: 12px; border-left: 1px solid var(--border); padding-left: 12px;">Calidad Jurídica: Estándar</span>`;
+                    }
+                }
 
                 let html = `
                 <div class="resultado">
-                    <span class="etiqueta">${principal.categoria || 'Documento Oficial'}</span>
-                    <div class="titulo">🔗 <a href="${principal.url}" target="_blank" style="color: inherit; text-decoration: none;">${principal.titulo}</a></div>
+                    <div style="display: flex; align-items: center; flex-wrap: wrap;">
+                        <span class="etiqueta">${principal.categoria || 'Documento Oficial'}</span>
+                        ${selloRigor}
+                    </div>
+                    <div class="titulo"><a href="${principal.url}" target="_blank">${principal.titulo}</a></div>
                     <div class="texto-destacado">${textoPrincipal}</div>
                 `;
 
-                // LA LÍNEA AMARILLA (Otros fragmentos de la misma ley)
                 if (fragmentosMismaFuente.length > 0) {
                     html += `
                     <details class="desplegable-interno">
-                        <summary>📄 Otros fragmentos de la misma fuente de interés (${fragmentosMismaFuente.length})</summary>
+                        <summary>Fragmentos adicionales del mismo documento (${fragmentosMismaFuente.length})</summary>
                         <ul>${fragmentosMismaFuente.map(f => `
                             <li><div class="fragmento-texto">${obtenerTexto(f, 650)}</div></li>
                         `).join('')}</ul>
@@ -372,26 +372,24 @@
                     `;
                 }
 
-                // LA LÍNEA MORADA (Otras leyes que hablan de lo mismo)
                 if (otrasFuentesIds.length > 0) {
                     html += `
                     <details class="desplegable-externo">
-                        <summary>📚 Fuentes oficiales unificadas - Tema similar (${otrasFuentesIds.length})</summary>
+                        <summary>Jurisprudencia y normativa vinculada (${otrasFuentesIds.length})</summary>
                         <ul>${otrasFuentesIds.map(id => {
                             const primeraDeOtraFuente = cluster.fuentes[id][0];
                             const otrosFragmentosDeEsaFuente = cluster.fuentes[id].slice(1);
                             
                             let subHtml = `
                             <li>
-                                <div>🔗 <a href="${primeraDeOtraFuente.url}" target="_blank" style="color: #1a0dab; font-weight: 600; text-decoration: none;">${primeraDeOtraFuente.dominio}</a> <span class="titulo-enlace">- ${primeraDeOtraFuente.titulo}</span></div>
+                                <div><a href="${primeraDeOtraFuente.url}" target="_blank" style="color: var(--primary); font-weight: 600; text-decoration: none;">${primeraDeOtraFuente.dominio}</a> <span class="titulo-enlace">- ${primeraDeOtraFuente.titulo}</span></div>
                                 <div class="fragmento-texto">${obtenerTexto(primeraDeOtraFuente, 650)}</div>
                             `;
                             
-                            // Fragmentos adicionales de esa otra fuente
                             if(otrosFragmentosDeEsaFuente.length > 0) {
                                 subHtml += `
-                                <details class="desplegable-interno" style="margin-top: 8px;">
-                                    <summary>Más fragmentos de esta fuente (${otrosFragmentosDeEsaFuente.length})</summary>
+                                <details class="desplegable-interno">
+                                    <summary>Más referencias en este origen (${otrosFragmentosDeEsaFuente.length})</summary>
                                     <ul>${otrosFragmentosDeEsaFuente.map(f => `
                                         <li><div class="fragmento-texto">${obtenerTexto(f, 650)}</div></li>
                                     `).join('')}</ul>
@@ -404,7 +402,7 @@
                     `;
                 }
 
-                html += `</div>`; // Cierra la tarjeta
+                html += `</div>`; 
                 return html;
             }).join('') + '</div>';
         }
