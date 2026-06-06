@@ -54,7 +54,7 @@ services:
       - meilisearch
     restart: unless-stopped
     volumes:
-      - huggingface_cache:/huggingface_cach
+      - huggingface_cache:/huggingface_cache
     logging:
       driver: "json-file"
       options:
@@ -75,7 +75,7 @@ services:
       - meilisearch
     restart: unless-stopped
     volumes:
-      - huggingface_cache:/huggingface_cach
+      - huggingface_cache:/huggingface_cache
     # LÍMITES DOCKER: Le ponemos una correa corta
     deploy:
       resources:
