@@ -24,17 +24,32 @@ def cargar_dominios_permitidos():
 def amputar_parametros_basura(url):
     parsed = urlparse(url)
     
-    # 1. ESCUDO PARA EL BOE: Solo permitimos el documento principal (ID)
+    # 1. ESCUDO ESTRICTO PARA EL BOE: Solo permitimos el documento principal (ID)
     if 'boe.es' in parsed.netloc and 'act.php' in parsed.path:
         params = parse_qs(parsed.query)
         if 'id' in params:
-            # Reconstruimos la URL solo con el parámetro 'id', matando las pestañas como &tn=5
             new_query = urlencode({'id': params['id'][0]})
             return urlunparse((parsed.scheme, parsed.netloc, parsed.path, '', new_query, ''))
             
-    # 2. Limpieza general para otras webs (Sedes electrónicas, etc.)
-    if 'idProvincia=' in parsed.query:
-        return urlunparse((parsed.scheme, parsed.netloc, parsed.path, parsed.params, '', parsed.fragment))
+    # 2. ESCUDO GENÉRICO PARA EL RESTO DE WEBS OFICIALES
+    # Lista negra de parámetros que no aportan contenido legal, solo desvían a la araña
+    parametros_basura = [
+        'idprovincia', 'sessionid', 'phpsessid', 'sid', 
+        'lang', 'idioma', 'id_idioma', 
+        'utm_source', 'utm_medium', 'utm_campaign', 
+        'page', 'pag', 'tn', 'bj', 'pestania'
+    ]
+    
+    if parsed.query:
+        # Extraemos todos los parámetros de la URL
+        params = parse_qs(parsed.query)
+        
+        # Filtramos y nos quedamos SOLO con los que NO están en la lista negra
+        params_limpios = {k: v for k, v in params.items() if k.lower() not in parametros_basura}
+        
+        # Reconstruimos la URL con los parámetros limpios (doseq=True mantiene bien las listas)
+        new_query = urlencode(params_limpios, doseq=True) 
+        return urlunparse((parsed.scheme, parsed.netloc, parsed.path, parsed.params, new_query, parsed.fragment))
         
     return url
 
