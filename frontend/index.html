@@ -302,6 +302,7 @@
         }
 
         // --- MOTOR DE RENDERIZADO Y LÓGICA DE CLUSTERS ---
+        // --- MOTOR DE RENDERIZADO Y LÓGICA DE CLUSTERS ---
         function generarHTMLResultados(hits) {
             const clusters = {};
 
@@ -318,6 +319,19 @@
                 }
                 
                 return textoFormateado;
+            };
+
+            // 👇 NUEVA FUNCIÓN: Generador universal de sellos de calidad
+            const generarSelloRigor = (calidad) => {
+                if (!calidad) return ""; // Por si el vectorizador aún no ha procesado este chunk
+                
+                if (calidad >= 8) {
+                    return `<span style="font-size: 0.85em; color: #0f3b5e; font-weight: 600; margin-left: 12px; border-left: 1px solid var(--border); padding-left: 12px;">Calidad Jurídica: Alta</span>`;
+                } else if (calidad >= 5) {
+                    return `<span style="font-size: 0.85em; color: var(--text-light); font-weight: 500; margin-left: 12px; border-left: 1px solid var(--border); padding-left: 12px;">Calidad Jurídica: Estándar</span>`;
+                } else {
+                    return `<span style="font-size: 0.85em; color: #80868b; font-weight: 500; margin-left: 12px; border-left: 1px solid var(--border); padding-left: 12px;">Calidad Jurídica: Básica</span>`;
+                }
             };
 
             hits.forEach(hit => {
@@ -341,21 +355,11 @@
                 
                 const textoPrincipal = obtenerTexto(principal, 650);
 
-                // --- SELLO DE RIGOR ---
-                let selloRigor = "";
-                if (principal.calidad_texto) {
-                    if (principal.calidad_texto >= 8) {
-                        selloRigor = `<span style="font-size: 0.85em; color: #0f3b5e; font-weight: 600; margin-left: 12px; border-left: 1px solid var(--border); padding-left: 12px;">Calidad Jurídica: Alta</span>`;
-                    } else if (principal.calidad_texto >= 5) {
-                        selloRigor = `<span style="font-size: 0.85em; color: var(--text-light); font-weight: 500; margin-left: 12px; border-left: 1px solid var(--border); padding-left: 12px;">Calidad Jurídica: Estándar</span>`;
-                    }
-                }
-
                 let html = `
                 <div class="resultado">
-                    <div style="display: flex; align-items: center; flex-wrap: wrap;">
+                    <div style="display: flex; align-items: center; flex-wrap: wrap; margin-bottom: 8px;">
                         <span class="etiqueta">${principal.categoria || 'Documento Oficial'}</span>
-                        ${selloRigor}
+                        ${generarSelloRigor(principal.calidad_texto)}
                     </div>
                     <div class="titulo"><a href="${principal.url}" target="_blank">${principal.titulo}</a></div>
                     <div class="texto-destacado">${textoPrincipal}</div>
@@ -366,7 +370,13 @@
                     <details class="desplegable-interno">
                         <summary>Fragmentos adicionales del mismo documento (${fragmentosMismaFuente.length})</summary>
                         <ul>${fragmentosMismaFuente.map(f => `
-                            <li><div class="fragmento-texto">${obtenerTexto(f, 650)}</div></li>
+                            <li>
+                                <div style="display: flex; align-items: center; margin-bottom: 6px;">
+                                    <span style="font-size: 0.8em; color: #5f6368; font-weight: 600; text-transform: uppercase;">Fragmento Secundario</span>
+                                    ${generarSelloRigor(f.calidad_texto)}
+                                </div>
+                                <div class="fragmento-texto">${obtenerTexto(f, 650)}</div>
+                            </li>
                         `).join('')}</ul>
                     </details>
                     `;
@@ -382,7 +392,10 @@
                             
                             let subHtml = `
                             <li>
-                                <div><a href="${primeraDeOtraFuente.url}" target="_blank" style="color: var(--primary); font-weight: 600; text-decoration: none;">${primeraDeOtraFuente.dominio}</a> <span class="titulo-enlace">- ${primeraDeOtraFuente.titulo}</span></div>
+                                <div style="display: flex; align-items: center; flex-wrap: wrap; margin-bottom: 6px;">
+                                    <div><a href="${primeraDeOtraFuente.url}" target="_blank" style="color: var(--primary); font-weight: 600; text-decoration: none;">${primeraDeOtraFuente.dominio}</a> <span class="titulo-enlace">- ${primeraDeOtraFuente.titulo}</span></div>
+                                    ${generarSelloRigor(primeraDeOtraFuente.calidad_texto)}
+                                </div>
                                 <div class="fragmento-texto">${obtenerTexto(primeraDeOtraFuente, 650)}</div>
                             `;
                             
@@ -391,7 +404,13 @@
                                 <details class="desplegable-interno">
                                     <summary>Más referencias en este origen (${otrosFragmentosDeEsaFuente.length})</summary>
                                     <ul>${otrosFragmentosDeEsaFuente.map(f => `
-                                        <li><div class="fragmento-texto">${obtenerTexto(f, 650)}</div></li>
+                                        <li>
+                                            <div style="display: flex; align-items: center; margin-bottom: 6px;">
+                                                <span style="font-size: 0.8em; color: #5f6368; font-weight: 600; text-transform: uppercase;">Fragmento Extra</span>
+                                                ${generarSelloRigor(f.calidad_texto)}
+                                            </div>
+                                            <div class="fragmento-texto">${obtenerTexto(f, 650)}</div>
+                                        </li>
                                     `).join('')}</ul>
                                 </details>`;
                             }
