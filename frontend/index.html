@@ -303,24 +303,27 @@
 
         // --- GENERADOR DE HTML CON RAG ANIDADO ---
         // --- GENERADOR DE HTML CON RAG ANIDADO ---
-        function generarHTMLResultados(hits) {
-            const clusters = {};
-
-            // 👇 EL ESCUDO DEFINITIVO: Cortamos por lo sano si Meilisearch se vuelve loco
-            const obtenerTexto = (hit, limite) => {
-                let textoFormateado = hit._formatted ? hit._formatted.contenido : "";
-                
-                // Medimos cuánto texto real hay (quitando puntos suspensivos y etiquetas <em>)
-                let textoLimpio = textoFormateado.replace(/<\/?em>/g, '').replace(/\./g, '').trim();
-                
-                // Si Meilisearch nos devuelve una birria de texto (menos de 50 letras reales)
-                if (textoLimpio.length < 50) {
-                    // Ignoramos a Meilisearch y cogemos el texto crudo cortándolo a nuestra medida
-                    return hit.contenido ? hit.contenido.substring(0, limite) + '...' : "Texto no disponible.";
-                }
-                
-                return textoFormateado;
-            };
+        const obtenerTexto = (hit, limite) => {
+            let textoFormateado = hit._formatted ? hit._formatted.contenido : "";
+            
+            // Medimos cuánto texto real hay (quitando puntos suspensivos y etiquetas <em>)
+            let textoLimpio = textoFormateado.replace(/<\/?em>/g, '').replace(/\./g, '').trim();
+            
+            // 🛡️ NUEVO FILTRO ANTI-BASURA: Cazamos los metadatos de OpenData
+            if (textoLimpio.startsWith('vURI') || textoLimpio.startsWith('Objeto')) {
+                return "<em>[Fragmento de datos técnicos omitido]</em>";
+            }
+            
+            // Tu escudo original + Comprobación de si Meilisearch resaltó algo
+            // (Si no hay <em>, es que la coincidencia fue vectorial y el recorte será malo)
+            if (textoLimpio.length < 50 || !textoFormateado.includes('<em>')) {
+                // Ignoramos a Meilisearch y cogemos el texto crudo cortándolo a tu medida original
+                return hit.contenido ? hit.contenido.substring(0, limite) + '...' : "Texto no disponible.";
+            }
+            
+            // Si todo está bien, devolvemos el texto formateado original
+            return textoFormateado;
+        };
 
             // 1. Agrupación Doble (Por Temática y luego por Documento/Origen)
             hits.forEach(hit => {
