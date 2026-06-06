@@ -302,27 +302,37 @@
         }
 
         // --- GENERADOR DE HTML CON RAG ANIDADO ---
+        // --- GENERADOR DE HTML CON RAG ANIDADO ---
         function generarHTMLResultados(hits) {
             const clusters = {};
 
+            // 👇 EL ESCUDO DEFINITIVO: Cortamos por lo sano si Meilisearch se vuelve loco
+            const obtenerTexto = (hit, limite) => {
+                let textoFormateado = hit._formatted ? hit._formatted.contenido : "";
+                
+                // Medimos cuánto texto real hay (quitando puntos suspensivos y etiquetas <em>)
+                let textoLimpio = textoFormateado.replace(/<\/?em>/g, '').replace(/\./g, '').trim();
+                
+                // Si Meilisearch nos devuelve una birria de texto (menos de 50 letras reales)
+                if (textoLimpio.length < 50) {
+                    // Ignoramos a Meilisearch y cogemos el texto crudo cortándolo a nuestra medida
+                    return hit.contenido ? hit.contenido.substring(0, limite) + '...' : "Texto no disponible.";
+                }
+                
+                return textoFormateado;
+            };
+
             // 1. Agrupación Doble (Por Temática y luego por Documento/Origen)
             hits.forEach(hit => {
-                // Si no tiene cluster_id (porque el worker aún no pasó), usamos su propio ID
                 const idCluster = hit.cluster_id || hit.origen_id || hit.id;
                 const idOrigen = hit.origen_id || hit.id;
 
                 if (!clusters[idCluster]) {
-                    clusters[idCluster] = {
-                        principal: hit, // El mejor resultado absoluto del tema
-                        fuentes: {}     // Diccionario de orígenes dentro de este tema
-                    };
+                    clusters[idCluster] = { principal: hit, fuentes: {} };
                 }
-
                 if (!clusters[idCluster].fuentes[idOrigen]) {
                     clusters[idCluster].fuentes[idOrigen] = [];
                 }
-                
-                // Guardamos el fragmento dentro de su origen correspondiente
                 clusters[idCluster].fuentes[idOrigen].push(hit);
             });
 
@@ -337,30 +347,29 @@
                 // OTROS documentos distintos que hablan de lo mismo
                 const otrasFuentesIds = Object.keys(cluster.fuentes).filter(id => id !== idOrigenPrincipal);
                 
-                const textoPrincipal = principal._formatted ? principal._formatted.contenido : principal.contenido.substring(0, 250) + '...';
+                // Aplicamos nuestra función blindada al texto principal (muy largo)
+                const textoPrincipal = obtenerTexto(principal, 400);
 
                 let html = `
                 <div class="resultado">
-                    <span class="etiqueta">${principal.categoria}</span>
+                    <span class="etiqueta">${principal.categoria || 'Documento Oficial'}</span>
                     <div class="titulo">🔗 <a href="${principal.url}" target="_blank" style="color: inherit; text-decoration: none;">${principal.titulo}</a></div>
                     <div class="texto-destacado">${textoPrincipal}</div>
                 `;
 
-                // LA LÍNEA AMARILLA (Otros fragmentos del mismo origen)
+                // LA LÍNEA AMARILLA (Otros fragmentos de la misma ley)
                 if (fragmentosMismaFuente.length > 0) {
                     html += `
                     <details class="desplegable-interno">
                         <summary>📄 Otros fragmentos de la misma fuente de interés (${fragmentosMismaFuente.length})</summary>
                         <ul>${fragmentosMismaFuente.map(f => `
-                            <li>
-                                <div class="fragmento-texto">${f._formatted ? f._formatted.contenido : f.contenido.substring(0, 150) + '...'}</div>
-                            </li>
+                            <li><div class="fragmento-texto">${obtenerTexto(f, 250)}</div></li>
                         `).join('')}</ul>
                     </details>
                     `;
                 }
 
-                // LA LÍNEA MORADA (Otras fuentes oficiales relacionadas por temática)
+                // LA LÍNEA MORADA (Otras leyes que hablan de lo mismo)
                 if (otrasFuentesIds.length > 0) {
                     html += `
                     <details class="desplegable-externo">
@@ -372,16 +381,16 @@
                             let subHtml = `
                             <li>
                                 <div>🔗 <a href="${primeraDeOtraFuente.url}" target="_blank" style="color: #1a0dab; font-weight: 600; text-decoration: none;">${primeraDeOtraFuente.dominio}</a> <span class="titulo-enlace">- ${primeraDeOtraFuente.titulo}</span></div>
-                                <div class="fragmento-texto">${primeraDeOtraFuente._formatted ? primeraDeOtraFuente._formatted.contenido : primeraDeOtraFuente.contenido.substring(0, 150) + '...'}</div>
+                                <div class="fragmento-texto">${obtenerTexto(primeraDeOtraFuente, 250)}</div>
                             `;
                             
-                            // Si ESA otra fuente también tiene múltiples fragmentos, se anidan
+                            // Fragmentos adicionales de esa otra fuente
                             if(otrosFragmentosDeEsaFuente.length > 0) {
                                 subHtml += `
                                 <details class="desplegable-interno" style="margin-top: 8px;">
                                     <summary>Más fragmentos de esta fuente (${otrosFragmentosDeEsaFuente.length})</summary>
                                     <ul>${otrosFragmentosDeEsaFuente.map(f => `
-                                        <li><div class="fragmento-texto">${f._formatted ? f._formatted.contenido : f.contenido.substring(0, 150) + '...'}</div></li>
+                                        <li><div class="fragmento-texto">${obtenerTexto(f, 250)}</div></li>
                                     `).join('')}</ul>
                                 </details>`;
                             }
@@ -392,7 +401,7 @@
                     `;
                 }
 
-                html += `</div>`; // Cierra la tarjeta resultado
+                html += `</div>`; // Cierra la tarjeta
                 return html;
             }).join('') + '</div>';
         }
