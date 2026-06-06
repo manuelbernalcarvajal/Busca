@@ -126,6 +126,7 @@ class ProcesadorGobiernoPipeline:
                 'orden_lectura': indice + 1, 
                 'fecha_indexacion': item['fecha_indexacion'],
                 'estado_ia': 'pendiente' 
+                '_vectors': {'default': None}
             }
             documentos_a_enviar.append(doc_chunk)
 
