@@ -130,7 +130,7 @@ class ProcesadorGobiernoPipeline:
             documentos_a_enviar.append(doc_chunk)
 
         if documentos_a_enviar:
-            url_api = f"{self.meilisearch_url}/indexes/{self.indice}/documents"
+            url_api = f"{self.meilisearch_url}/indexes/{self.indice}/documents?primaryKey=id"
             try:
                 lote_size = 100
                 for i in range(0, len(documentos_a_enviar), lote_size):
