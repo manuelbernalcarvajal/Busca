@@ -43,7 +43,7 @@ class PdfPipeline:
             documentos_a_enviar.append(doc_chunk)
 
         if documentos_a_enviar:
-            url_api = f"{self.meilisearch_url}/indexes/{self.indice}/documents"
+            url_api = f"{self.meilisearch_url}/indexes/{self.indice}/documents?primaryKey=id"
             try:
                 headers = {'Authorization': f'Bearer {self.meilisearch_key}', 'Content-Type': 'application/json'}
                 respuesta = requests.post(url_api, headers=headers, json=documentos_a_enviar, timeout=15)
