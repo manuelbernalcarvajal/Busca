@@ -279,16 +279,26 @@
                 const respuesta = await fetch('/api/buscar', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ q: "", sort: ["fecha_indexacion:desc"], limit: 5 })
+                    body: JSON.stringify({ 
+                        q: "", 
+                        sort: ["fecha_indexacion:desc"], 
+                        limit: 5,
+                        // 👇 AQUÍ ESTÁ LA MAGIA: Le pedimos el mismo tamaño que a los normales 👇
+                        attributesToHighlight: ["contenido", "titulo"], 
+                        attributesToCrop: ["contenido:140"], 
+                        cropMarker: "..."
+                    })
                 });
                 const datos = await respuesta.json();
                 
                 if(datos.hits && datos.hits.length > 0) {
                     hitsAcumulados = datos.hits;
-                    document.getElementById('panelPrincipal').innerHTML = `<h3 style="color:#5f6368; text-align:center;">🔥 Últimos fragmentos procesados</h3>` + generarHTMLResultados(hitsAcumulados);
+                    document.getElementById('panelPrincipal').innerHTML = `<h3 style="color:#5f6368; text-align:center;">🔥 Últimas normativas procesadas</h3>` + generarHTMLResultados(hitsAcumulados);
                     document.getElementById('btnCargarMas').style.display = 'none';
                 }
-            } catch (e) {}
+            } catch (e) {
+                console.error("Error cargando novedades:", e);
+            }
         }
 
         // --- GENERADOR DE HTML CON RAG ANIDADO ---
